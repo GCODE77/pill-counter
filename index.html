@@ -28,7 +28,7 @@
   .guide{background:var(--panel);border-left:6px solid var(--primary);padding:12px 14px;border-radius:10px;font-size:19px;font-weight:700;line-height:1.4;margin-bottom:10px}
   .guide small{display:block;font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}
   .stage{position:relative;flex:none;min-height:220px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
-  video,canvas.view{max-width:100%;max-height:max(220px,calc(100dvh - 400px));display:block;touch-action:manipulation}
+  video,canvas.view{max-width:100%;max-height:max(240px,calc(100dvh - 400px));display:block;touch-action:manipulation}
   .count-badge{text-align:center;margin:0 0 8px;min-height:64px;background:var(--primary);color:var(--primary-text);
     border-radius:16px;padding:4px 22px;font-size:40px;font-weight:900;box-shadow:0 4px 18px rgba(0,0,0,.5);display:none;white-space:nowrap}
   .count-badge .sub{font-size:17px;font-weight:700;margin-top:-4px}
@@ -155,6 +155,33 @@
   .stage{border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 32px rgba(0,0,0,.45);background:#05070d}
   .stage video{cursor:pointer}
   .ovl{position:absolute;pointer-events:none}
+  /* v3.1: 버튼과 칸을 전체적으로 작게 */
+  button,.btn{min-height:44px;padding:10px 12px;font-size:16px;border-radius:12px}
+  .actions{gap:6px;margin-top:8px}
+  .actions button{min-height:44px;font-size:15px;padding:8px 6px}
+  .steps{margin:8px 0}
+  .step{padding:6px 2px}
+  .guide{padding:10px 12px;margin-bottom:8px}
+  .count-badge{min-height:56px;padding:2px 16px;font-size:34px;margin-bottom:6px}
+  .count-badge span{font-size:18px}
+  .count-badge .wait{font-size:17px}
+  .count-badge .sub{font-size:14px;margin-top:-2px}
+  nav.tabs button{min-height:52px;font-size:12px;padding:4px}
+  nav.tabs button i{font-size:20px}
+  .app{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  #pgCount .actions{bottom:calc(62px + env(safe-area-inset-bottom))}
+  input.text{font-size:16px;padding:10px 12px}
+  .stepper button{min-height:40px;width:40px;font-size:20px}
+  .stepper span{min-width:40px;font-size:18px}
+  .mini{min-height:38px;width:38px}
+  .inv-bar button,.name-with-btn button{min-height:44px;font-size:14px}
+  .inv-addpack button{min-height:40px}
+  .hist .cnt,.inv .cnt{font-size:26px}
+  .hist img{width:56px;height:56px}
+  .scan .bar button{min-height:46px}
+  .inv-bar .text,.hist-head .text{flex:1;min-width:0}
+  .inv-bar button{flex:none;padding:8px 10px}
+  html,body{overflow-x:hidden}
   .count-badge{background:linear-gradient(180deg,#1d2647,#121a31);color:var(--gold1);border:1.5px solid rgba(245,197,24,.55);
     box-shadow:0 10px 30px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);border-radius:18px;font-variant-numeric:tabular-nums}
   .count-badge span{color:#e2e8f0}
@@ -180,7 +207,7 @@
 </head>
 <body>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v3.0</small></div></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v3.1</small></div></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -327,7 +354,7 @@
     <div class="card">
       <h2>화면이 예전 그대로일 때</h2>
       <ul>
-        <li>맨 위 제목 옆 버전이 <b>v3.0</b>이 아니면 예전 화면이 저장된 것입니다.</li>
+        <li>맨 위 제목 옆 버전이 <b>v3.1</b>이 아니면 예전 화면이 저장된 것입니다.</li>
         <li>브라우저에서 <b>새로고침</b>하거나, 홈 화면 앱이면 <b>앱을 완전히 닫았다가</b> 다시 여세요. 업데이트 후 최대 10분 정도 걸릴 수 있습니다.</li>
       </ul>
     </div>
@@ -376,13 +403,19 @@ function btn(label,cls,fn){const b=document.createElement('button');b.className=
 
 /* ---------- 계수 엔진 (백그라운드 작업) ----------
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
-const engine=new Worker('engine.js');
-let reqId=0; const pending=new Map();
-engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
-engine.onerror=()=>{ $('busy').style.display='none'; toast('계산 중 오류가 났습니다. 다시 시도해 주세요'); };
-function analyze(img,seedArg,auto){
+let engine, reqId=0; const pending=new Map();
+function startEngine(){
+  engine=new Worker('engine.js?v=3.1');
+  engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
+  engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
+}
+startEngine();
+// 계산이 너무 오래 걸리면(사진 15초·실시간 4초) 중단하고 엔진을 새로 띄움 → 화면이 '세는 중'에 멈추지 않게
+function analyze(img,seedArg,auto,limit=15000){
   return new Promise(res=>{
-    const id=++reqId; pending.set(id,res);
+    const id=++reqId;
+    const timer=setTimeout(()=>{ if(!pending.has(id))return; pending.delete(id); engine.terminate(); pending.forEach(cb=>cb({none:true,timeout:true})); pending.clear(); startEngine(); res({none:true,timeout:true}); },limit);
+    pending.set(id,d=>{clearTimeout(timer);res(d)});
     const buf=img.data.buffer.slice(0);
     engine.postMessage({id,w:img.width,h:img.height,buf,seed:seedArg,tol:+tol.value,auto},[buf]);
   });
@@ -394,7 +427,7 @@ function run(auto){
   analyze(photo,auto?null:seed,auto).then(d=>{
     if(tok!==runTok) return;                       // 더 새로운 요청이 있으면 버림
     $('busy').style.display='none';
-    if(d.none){ stepPick(); toast('같은 약을 자동으로 찾지 못했습니다. 셀 약을 터치하세요'); return; }
+    if(d.none){ stepPick(); toast(d.timeout?'너무 오래 걸려 멈췄습니다. 셀 약 한 알을 터치해 주세요':'같은 약을 자동으로 찾지 못했습니다. 셀 약을 터치하세요'); return; }
     seed=d.seed; result={pts:d.pts,stat:d.stat,r:d.r,mask:d.mask};
     draw(); stepResult();
   });
@@ -450,7 +483,7 @@ function startLive(){
   live={busy:false,auto:true,seed:null,raf:0,last:null};
   video.classList.remove('hidden'); view.classList.add('hidden'); ovl.classList.remove('hidden');
   octx.clearRect(0,0,ovl.width,ovl.height);
-  guide.innerHTML='⚡ 비추기만 하면 자동으로 셉니다<small>숫자가 멈추면 <b>📷 촬영</b> → 고화질로 정밀하게 다시 셉니다 · 다른 약을 세려면 그 약을 터치</small>';
+  guide.innerHTML='⚡ 비추기만 하면 자동으로 셉니다<small>숫자가 멈추면 <b>📷 촬영</b> · 다른 약은 화면에서 터치</small>';
   badge.style.display='block'; badge.innerHTML='<span class="wait">약을 비춰 주세요</span>';
   liveLoop();
 }
@@ -463,7 +496,7 @@ function liveLoop(){
     gctx.drawImage(video,0,0,w,h);
     const img=gctx.getImageData(0,0,w,h), L=live;
     L.busy=true;
-    analyze(img,L.auto?null:L.seed,L.auto).then(d=>{
+    analyze(img,L.auto?null:L.seed,L.auto,4000).then(d=>{
       L.busy=false; if(live!==L) return;
       L.fw=w; L.fh=h;
       if(d.none){ L.last=null; octx.clearRect(0,0,ovl.width,ovl.height); badge.innerHTML='<span class="wait">약을 비춰 주세요</span>'; return; }
@@ -535,7 +568,7 @@ function stepPick(){
 
 function stepResult(){
   setStep(3); $('tune').style.display='block';
-  guide.innerHTML='✅ 자동으로 셌습니다<small>빠진 약은 터치해서 추가, 잘못된 표시는 터치해서 삭제 · 다른 약을 세려면 🎯 직접 선택</small>';
+  guide.innerHTML='✅ 자동으로 셌습니다<small>빠진 약 터치 → 추가 · 잘못된 표시 터치 → 삭제</small>';
   actions.innerHTML='';
   btn('↺ 다시 촬영','ghost',stepCapture);
   btn('🎯 직접 선택','ghost',stepPick);

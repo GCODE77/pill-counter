@@ -26,11 +26,15 @@ function count(){
   }
   L/=c;A/=c;B/=c;
   // 기준색 다듬기: 터치한 한 점이 아니라 '비슷한 색 전체'의 평균으로 (그림자·반사 쪽을 눌러도 결과가 같게)
+  const L0=L,A0=A,B0=B;
   for(let it=0;it<5;it++){
     let sl=0,sa=0,sb=0,n=0;
     for(let i=0;i<N;i+=2){const dl=(lab[i*3]-L)*0.5,da=lab[i*3+1]-A,db=lab[i*3+2]-B;
       if(dl*dl+da*da+db*db<(it<2?400:196)){sl+=lab[i*3];sa+=lab[i*3+1];sb+=lab[i*3+2];n++}}
-    if(n>50){L=sl/n;A=sa/n;B=sb/n}
+    if(n<=50) break;
+    const nl=sl/n,na=sa/n,nb=sb/n;
+    if(Math.hypot((nl-L0)*0.5,na-A0,nb-B0)>20) break;   // 다른 색(테두리·배경) 쪽으로 끌려가면 멈춤
+    L=nl;A=na;B=nb;
   }
   // 2) 색 거리 지도 → 히스토그램의 첫 골짜기를 자동 경계값으로 사용 (조명 차이에 강함)
   const dmap=new Float32Array(N), hist=new Float32Array(121);
@@ -49,7 +53,7 @@ function count(){
   const C0=Math.hypot(A,B);
   const glare=new Uint8Array(N);
   for(let i=0;i<N;i++){const l=lab[i*3],c=Math.hypot(lab[i*3+1],lab[i*3+2]);
-    if(l>Math.max(L+12,82)&&c<Math.max(C0*0.5,18)) glare[i]=1;}
+    if(l>Math.max(L+12,92)&&c<12) glare[i]=1;}   // 거의 흰색(반사광)만 — 밝은 회색 쟁반·약 사이 틈은 제외
   // 반사 덩어리 중 '작고' '약에 닿아 있는' 것만 채움 (넓게 밝은 쟁반·종이는 제외)
   { const gl=label(glare), near=dilate(dilate(mask)), maxG=N*0.0012;
     gl.blobs.forEach(px=>{ if(px.length>maxG) return; let touch=0; for(const p of px) if(near[p]){touch=1;break}
@@ -72,18 +76,33 @@ function count(){
     const c=commonSize(md,r0*r0); if(c>4) r0=Math.sqrt(c); }
   // 6) 약 중심부(core)만 남겨 붙은 약을 분리
   const core=new Uint8Array(N); for(let i=0;i<N;i++) if(dist[i]>r0*0.55) core[i]=1;
-  const {lbl,blobs}=label(core);
+  const {lbl,blobs:coreList}=label(core);
+  let blobs=coreList;
   // 기준 core = 터치 지점에서 가장 가까운 core
   let ref=-1,best=1e9;
   blobs.forEach((px,k)=>{for(let j=0;j<px.length;j+=4){const p=px[j],d=Math.hypot(p%W-seed.x,(p/W|0)-seed.y);if(d<best){best=d;ref=k}}});
   let unit=blobs[ref].length;
   // 1알 크기 = 사진 전체에서 '가장 흔한' 중심부 크기 (터치한 약이 글씨·반사로 쪼개져 작게 잡혀도 흔들리지 않음)
   unit=commonSize(blobs.map(b=>b.length),unit);
+  const refPix=blobs[ref][0];
+  // 6-2) 1알보다 큰 중심부는 더 깊은 곳(가운데)만 다시 봐서 봉우리가 여러 개면 따로 셈
+  //      → 빽빽하게 붙은 둥근 약·바이알에서 이웃끼리 이어진 중심부를 정확히 나눔
+  { const out=[];
+    blobs.forEach(px=>{
+      if(px.length<unit*1.5){out.push(px);return}
+      for(const lv of [0.72,0.85]){
+        const parts=labelSubset(px.filter(p=>dist[p]>r0*lv)).filter(q=>q.length>=3);
+        const r=px.length/unit, areaK=r<1.7?1:Math.round(r-0.15);
+        if(parts.length>=2&&parts.length>=areaK){parts.forEach(q=>{q.sub=true;out.push(q)});return}
+      }
+      out.push(px);
+    });
+    blobs=out; }
   // 7) 약 덩어리(전체 모양) 단위로 분석
   const full=label(mask);
   const coresOf=full.blobs.map(()=>[]);
   blobs.forEach((px,k)=>coresOf[full.lbl[px[0]]].push(k));
-  const coreK=px=>{const r=px.length/unit;return r<0.35?0:r<1.7?1:Math.round(r-0.15)};
+  const coreK=px=>{if(px.sub)return 1;const r=px.length/unit;return r<0.35?0:r<1.7?1:Math.round(r-0.15)};
   // 덩어리별 '하얗게 날아간(255에 가까운) 픽셀' 비율과 테두리 거칠기 → 빛 반사 판별용
   const pd=photo.data;
   const blobFeat=px=>{let clip=0,edge=0;for(const p of px){const j=p*4;if(pd[j]>245&&pd[j+1]>245&&pd[j+2]>245)clip++;
@@ -91,7 +110,7 @@ function count(){
     return {clip:clip/px.length,rough:edge*edge/(4*Math.PI*px.length)}};
   const info=full.blobs.map((px,f)=>({px,f,shape:pca(px),...blobFeat(px),n:coresOf[f].reduce((s,k)=>s+coreK(blobs[k]),0)}));
   // 기준 약 1알의 모양 = 터치한 약과 비슷한 '단독' 덩어리들의 중앙값
-  const sf=full.lbl[blobs[ref][0]], sInfo=info[sf];
+  const sf=full.lbl[refPix], sInfo=info[sf];
   const sArea=commonSize(info.filter(o=>o.n===1).map(o=>o.px.length),sInfo.px.length/Math.max(1,sInfo.n));
   const singles=info.filter(o=>o.n===1&&o.px.length>sArea*0.7&&o.px.length<sArea*1.4);
   const med=f=>{const v=singles.map(f).sort((a,b)=>a-b);return v[v.length>>1]};
@@ -125,7 +144,7 @@ function count(){
       const cs=coresOf[o.f].filter(c=>coreK(blobs[c])>0);
       const blobOverlap=area/k<Ap*0.85&&k<=4;   // 작은 무더기인데 1알당 면적이 줄었으면 서로 가린 것
       cs.forEach(c=>{
-        const kc=coreK(blobs[c]), cr=blobs[c].length/unit;
+        const kc=coreK(blobs[c]), cr=blobs[c].sub?1:blobs[c].length/unit;
         const t=(kc===1&&cr<0.6)||blobOverlap?'겹침':'붙음';
         kmeans(blobs[c],kc).forEach(p=>{pts.push({x:p.x,y:p.y,type:t});stat[t]++});
       });
@@ -187,12 +206,14 @@ function autoSeedCore(){
       cand.push({px,n:px.length,cx:sx/px.length,cy:sy/px.length,rough});
     });
     cand.forEach(c=>{
-      let sc=0; for(const o of cand) if(o!==c&&o.n>c.n*0.75&&o.n<c.n*1.33) sc++;
-      sc+=1-c.rough*0.2;                               // 같은 점수면 더 매끈한(단독) 약
+      let sim=0; for(const o of cand) if(o!==c&&o.n>c.n*0.75&&o.n<c.n*1.33) sim++;
+      if(sim<2) return;
+      // 반복 횟수 × 크기 × 매끈함 → 약 사이 작은 빈틈(많지만 작고 오목함)보다 실제 약을 고름
+      const sc=sim*Math.sqrt(c.n)/c.rough;
       if(sc>bs){bs=sc;best=c}
     });
   });
-  if(!best||bs<2) return null;                         // 반복되는 물체가 없으면 직접 선택으로
+  if(!best) return null;                         // 반복되는 물체가 없으면 직접 선택으로
   // 3) 그 물체 안에서 중심에 가장 가까운 픽셀
   let bp=best.px[0],bd=1e18; for(const p of best.px){const d=(p%W-best.cx)**2+(((p/W)|0)-best.cy)**2;if(d<bd){bd=d;bp=p}}
   return {x:bp%W,y:(bp/W)|0};
@@ -209,6 +230,17 @@ function pca(px){
   return {len:4*Math.sqrt(t+d),wid:4*Math.sqrt(Math.max(0,t-d))};
 }
 
+function labelSubset(px){
+  // 픽셀 목록 안에서만 이어진 조각 나누기
+  const set=new Set(px), seen=new Set(), parts=[];
+  for(const s0 of px){
+    if(seen.has(s0))continue; const q=[s0],part=[]; seen.add(s0);
+    while(q.length){const p=q.pop();part.push(p);const x=p%W;
+      for(const n of [x>0?p-1:-1,x<W-1?p+1:-1,p-W,p+W]) if(n>=0&&set.has(n)&&!seen.has(n)){seen.add(n);q.push(n)}}
+    parts.push(part);
+  }
+  return parts;
+}
 function label(m){
   const N=W*H,lbl=new Int32Array(N).fill(-1),blobs=[],stack=new Int32Array(N);
   for(let s=0;s<N;s++){
@@ -252,15 +284,24 @@ function erode(m){const o=new Uint8Array(m.length);for(let y=1;y<H-1;y++)for(let
 function dilate(m){const o=new Uint8Array(m.length);for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;o[i]=m[i]|m[i-1]|m[i+1]|m[i-W]|m[i+W]}return o}
 
 function kmeans(px,k){
-  const P=px.map(p=>({x:p%W,y:(p/W)|0}));
-  if(k===1){let sx=0,sy=0;P.forEach(p=>{sx+=p.x;sy+=p.y});return[{x:sx/P.length,y:sy/P.length}]}
-  // k-means++ 초기화
-  const C=[P[(Math.random()*P.length)|0]];
-  while(C.length<k){let far=null,fd=-1;for(let i=0;i<P.length;i+=3){const p=P[i];let d=1e18;C.forEach(c=>{d=Math.min(d,(p.x-c.x)**2+(p.y-c.y)**2)});if(d>fd){fd=d;far=p}}C.push({...far})}
-  for(let it=0;it<12;it++){
-    const s=C.map(()=>({x:0,y:0,n:0}));
-    for(let i=0;i<P.length;i+=2){const p=P[i];let bi=0,bd=1e18;C.forEach((c,j)=>{const d=(p.x-c.x)**2+(p.y-c.y)**2;if(d<bd){bd=d;bi=j}});s[bi].x+=p.x;s[bi].y+=p.y;s[bi].n++}
-    s.forEach((v,j)=>{if(v.n){C[j]={x:v.x/v.n,y:v.y/v.n}}});
+  // 덩어리를 k개 위치로 나눔. 수백 알이 한 덩어리여도 빠르도록 점을 추려서 계산
+  if(k===1){let sx=0,sy=0;for(const p of px){sx+=p%W;sy+=(p/W)|0}return[{x:sx/px.length,y:sy/px.length}]}
+  const step=Math.max(1,Math.floor(px.length/Math.min(px.length,Math.max(400,k*20),6000)));
+  const X=[],Y=[]; for(let i=0;i<px.length;i+=step){X.push(px[i]%W);Y.push((px[i]/W)|0)}
+  const n=X.length, md=new Float64Array(n).fill(1e18), C=[];
+  // 가장 먼 점부터 차례로 중심 고르기 (점마다 최소거리를 저장해 O(k·n))
+  let pick=0;
+  for(let c=0;c<k;c++){
+    C.push({x:X[pick],y:Y[pick]});
+    let far=0,fd=-1;
+    for(let i=0;i<n;i++){const d=(X[i]-X[pick])**2+(Y[i]-Y[pick])**2;if(d<md[i])md[i]=d;if(md[i]>fd){fd=md[i];far=i}}
+    pick=far;
+  }
+  const sx=new Float64Array(k),sy=new Float64Array(k),cn=new Int32Array(k);
+  for(let it=0;it<8;it++){
+    sx.fill(0);sy.fill(0);cn.fill(0);
+    for(let i=0;i<n;i++){let bi=0,bd=1e18;for(let j=0;j<k;j++){const d=(X[i]-C[j].x)**2+(Y[i]-C[j].y)**2;if(d<bd){bd=d;bi=j}}sx[bi]+=X[i];sy[bi]+=Y[i];cn[bi]++}
+    for(let j=0;j<k;j++) if(cn[j]) C[j]={x:sx[j]/cn[j],y:sy[j]/cn[j]};
   }
   return C;
 }
