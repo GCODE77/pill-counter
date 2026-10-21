@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>약 계수기</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --text:#f8fafc; --muted:#cbd5e1;
+    --primary:#facc15; --primary-text:#111827; --ok:#22c55e; --danger:#f87171; --line:#334155;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:"Pretendard","Malgun Gothic",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  .app{max-width:900px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:12px 14px calc(14px + env(safe-area-inset-bottom))}
+  header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  h1{font-size:22px;margin:4px 0}
+  .steps{display:flex;gap:6px;margin:10px 0}
+  .step{flex:1;text-align:center;padding:8px 4px;border-radius:10px;background:var(--panel);color:var(--muted);font-weight:700;font-size:15px;border:2px solid transparent}
+  .step.active{border-color:var(--primary);color:var(--primary)}
+  .step.done{color:var(--ok)}
+  .guide{background:var(--panel);border-left:6px solid var(--primary);padding:12px 14px;border-radius:10px;font-size:19px;font-weight:700;line-height:1.4;margin-bottom:10px}
+  .guide small{display:block;font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}
+  .stage{position:relative;flex:1;min-height:300px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  video,canvas.view{max-width:100%;max-height:62vh;display:block;touch-action:manipulation}
+  .count-badge{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--primary);color:var(--primary-text);
+    border-radius:16px;padding:6px 22px;font-size:44px;font-weight:900;box-shadow:0 4px 18px rgba(0,0,0,.5);display:none;white-space:nowrap}
+  .count-badge span{font-size:22px;font-weight:800;margin-left:4px}
+  .busy{position:absolute;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font-size:22px;font-weight:800}
+  .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  button,.btn{appearance:none;border:0;border-radius:14px;font-size:19px;font-weight:800;padding:16px 18px;cursor:pointer;min-height:58px;flex:1;
+    display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
+  .primary{background:var(--primary);color:var(--primary-text)}
+  .secondary{background:var(--panel);color:var(--text);border:2px solid var(--line)}
+  button:disabled{opacity:.4}
+  input[type=file]{display:none}
+  .tune{background:var(--panel);border-radius:12px;padding:12px 14px;margin-top:10px;display:none}
+  .tune label{display:flex;justify-content:space-between;font-weight:700;font-size:16px}
+  .tune input[type=range]{width:100%;height:34px;accent-color:var(--primary)}
+  .hint{color:var(--muted);font-size:14px;margin-top:6px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-top:6px}
+  .dot{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:4px}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <header><h1>💊 약 계수기</h1></header>
+
+  <div class="steps">
+    <div class="step" id="s1">① 촬영</div>
+    <div class="step" id="s2">② 기준 약 선택</div>
+    <div class="step" id="s3">③ 결과 확인</div>
+  </div>
+
+  <div class="guide" id="guide"></div>
+
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted autoplay class="hidden"></video>
+    <canvas id="view" class="view hidden"></canvas>
+    <div class="count-badge" id="badge"></div>
+    <div class="busy" id="busy">세는 중…</div>
+  </div>
+
+  <div class="tune" id="tune">
+    <label><span>색 허용 범위 (자동 보정)</span><span id="tolVal"></span></label>
+    <input type="range" id="tol" min="10" max="30" value="20">
+    <div class="hint">개수가 적게 나오면 → 오른쪽 / 배경까지 잡히면 → 왼쪽</div>
+    <div class="legend">
+      <span><i class="dot" style="background:#22c55e"></i>1개</span>
+      <span><i class="dot" style="background:#e879f9"></i>붙어있는 약(추정)</span>
+      <span><i class="dot" style="background:#38bdf8"></i>직접 추가</span>
+    </div>
+  </div>
+
+  <div class="actions" id="actions"></div>
+  <input type="file" id="file" accept="image/*" capture="environment">
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const video=$('video'), view=$('view'), ctx=view.getContext('2d',{willReadFrequently:true});
+const badge=$('badge'), guide=$('guide'), actions=$('actions'), tol=$('tol');
+let stream=null, photo=null, W=0, H=0, lab=null, seed=null, result=null, manual=[];
+const MAXSIDE=900;
+
+/* ---------- 화면 흐름 ---------- */
+function setStep(n){
+  ['s1','s2','s3'].forEach((s,i)=>{$(s).className='step'+(i+1===n?' active':i+1<n?' done':'')});
+}
+function btn(label,cls,fn){const b=document.createElement('button');b.className=cls;b.textContent=label;b.onclick=fn;actions.appendChild(b);return b}
+
+async function stepCapture(){
+  setStep(1); result=null; seed=null; manual=[];
+  badge.style.display='none'; $('tune').style.display='none';
+  view.classList.add('hidden');
+  guide.innerHTML='약을 겹치지 않게 펼쳐 놓고 촬영하세요<small>단색 배경(흰 종이 등) 위에서, 그림자가 적은 곳이 가장 정확합니다</small>';
+  actions.innerHTML='';
+  const shot=btn('📷 촬영하기','primary',capture);
+  btn('🖼 사진 불러오기','secondary',()=>$('file').click());
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+    video.srcObject=stream; video.classList.remove('hidden');
+  }catch(e){
+    shot.textContent='📷 카메라로 촬영'; shot.onclick=()=>$('file').click();
+    guide.innerHTML='아래 버튼으로 사진을 찍거나 불러오세요<small>이 브라우저에서는 실시간 카메라를 쓸 수 없어 사진 촬영 방식으로 진행합니다</small>';
+  }
+}
+function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden') }
+
+function capture(){
+  if(!video.videoWidth) return;
+  loadSource(video, video.videoWidth, video.videoHeight);
+}
+$('file').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const img=new Image(); img.onload=()=>loadSource(img,img.naturalWidth,img.naturalHeight);
+  img.src=URL.createObjectURL(f); e.target.value='';
+};
+
+function loadSource(src,w,h){
+  const s=MAXSIDE/Math.max(w,h); W=Math.round(w*s); H=Math.round(h*s);
+  view.width=W; view.height=H; ctx.drawImage(src,0,0,W,H);
+  photo=ctx.getImageData(0,0,W,H); lab=toLab(photo.data);
+  stopCam(); view.classList.remove('hidden'); stepPick();
+}
+
+function stepPick(){
+  setStep(2); ctx.putImageData(photo,0,0); badge.style.display='none'; $('tune').style.display='none';
+  guide.innerHTML='👆 셀 약 <u>한 개</u>를 손가락으로 터치하세요<small>터치한 약과 같은 모양·색상의 약만 셉니다</small>';
+  actions.innerHTML=''; btn('↺ 다시 촬영','secondary',stepCapture);
+}
+
+function stepResult(){
+  setStep(3); $('tune').style.display='block';
+  guide.innerHTML='결과를 확인하세요<small>빠진 약은 터치해서 추가, 잘못 잡힌 표시는 터치해서 삭제</small>';
+  actions.innerHTML='';
+  btn('↺ 다시 촬영','secondary',stepCapture);
+  btn('🎯 기준 다시 선택','secondary',stepPick);
+  btn('💾 결과 저장','primary',save);
+}
+
+/* ---------- 터치 처리 ---------- */
+view.addEventListener('click',e=>{
+  const r=view.getBoundingClientRect();
+  const x=Math.round((e.clientX-r.left)*W/r.width), y=Math.round((e.clientY-r.top)*H/r.height);
+  if($('s2').classList.contains('active')){ seed={x,y}; manual=[]; run(); return; }
+  if(!result) return;
+  const rad=Math.max(12,result.r*0.8);
+  let mi=manual.findIndex(p=>Math.hypot(p.x-x,p.y-y)<rad);
+  if(mi>=0){manual.splice(mi,1);draw();return}
+  let ai=result.pts.findIndex(p=>!p.off&&Math.hypot(p.x-x,p.y-y)<rad);
+  if(ai>=0){result.pts[ai].off=true;draw();return}
+  manual.push({x,y}); draw();
+});
+tol.oninput=()=>{$('tolVal').textContent=tolLabel(); if(seed){manual=[];run()}};
+const tolLabel=()=>{const v=tol.value-20;return v==0?'자동':(v>0?'+':'')+v};
+$('tolVal').textContent=tolLabel();
+
+/* ---------- 색 변환 (sRGB → Lab) ---------- */
+function toLab(d){
+  const n=d.length/4, out=new Float32Array(n*3);
+  const lin=v=>{v/=255;return v>0.04045?Math.pow((v+0.055)/1.055,2.4):v/12.92};
+  const LUT=new Float32Array(256); for(let i=0;i<256;i++)LUT[i]=lin(i);
+  const f=t=>t>0.008856?Math.cbrt(t):7.787*t+16/116;
+  for(let i=0;i<n;i++){
+    const r=LUT[d[i*4]],g=LUT[d[i*4+1]],b=LUT[d[i*4+2]];
+    const X=f((r*0.4124+g*0.3576+b*0.1805)/0.95047), Y=f(r*0.2126+g*0.7152+b*0.0722), Z=f((r*0.0193+g*0.1192+b*0.9505)/1.08883);
+    out[i*3]=116*Y-16; out[i*3+1]=500*(X-Y); out[i*3+2]=200*(Y-Z);
+  }
+  return out;
+}
+
+/* ---------- 계수 알고리즘 ---------- */
+function run(){
+  $('busy').style.display='flex';
+  setTimeout(()=>{ try{ result=count(); draw(); stepResult(); } finally{ $('busy').style.display='none'; } },20);
+}
+
+function count(){
+  const N=W*H, T=+tol.value;
+  // 1) 기준 색: 터치 지점 주변 평균
+  let L=0,A=0,B=0,c=0;
+  for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){
+    const x=seed.x+dx,y=seed.y+dy; if(x<0||y<0||x>=W||y>=H)continue;
+    const i=(y*W+x)*3; L+=lab[i];A+=lab[i+1];B+=lab[i+2];c++;
+  }
+  L/=c;A/=c;B/=c;
+  // 2) 색 거리 지도 → 히스토그램의 첫 골짜기를 자동 경계값으로 사용 (조명 차이에 강함)
+  const dmap=new Float32Array(N), hist=new Float32Array(121);
+  for(let i=0;i<N;i++){
+    const dl=(lab[i*3]-L)*0.5, da=lab[i*3+1]-A, db=lab[i*3+2]-B;
+    const d=Math.sqrt(dl*dl+da*da+db*db); dmap[i]=d; hist[Math.min(120,d|0)]++;
+  }
+  const sm=hist.map((_,i)=>{let v=0,c=0;for(let j=i-3;j<=i+3;j++)if(j>=0&&j<=120){v+=hist[j];c++}return v/c});
+  let pk=0; for(let i=1;i<=25;i++) if(sm[i]>sm[pk]) pk=i;
+  let th=Math.min(60,pk+8); for(let i=pk+1;i<=60;i++){ if(sm[i]<sm[th]) th=i; if(sm[i]>sm[th]*1.8 && i>th+3) break; }
+  th=Math.max(th,10)*(T/20);
+  let mask=new Uint8Array(N);
+  for(let i=0;i<N;i++) if(dmap[i]<th) mask[i]=1;
+  // 3) 노이즈 제거 + 약 표면 글씨/광택으로 생긴 구멍 메우기
+  mask=dilate(erode(mask));
+  // 4) 거리 변환: 약 안쪽일수록 값이 큼 → 붙은 약 사이 경계는 값이 작음
+  const dist=distT(mask);
+  // 5) 기준 약 두께: 터치 지점 주변의 최대 거리값
+  let r0=0; const R=25;
+  for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const x=seed.x+dx,y=seed.y+dy;if(x<0||y<0||x>=W||y>=H)continue;r0=Math.max(r0,dist[y*W+x])}
+  if(r0<2) return {pts:[],r:10,mask};
+  // 6) 약 중심부(core)만 남겨 붙은 약을 분리
+  const core=new Uint8Array(N); for(let i=0;i<N;i++) if(dist[i]>r0*0.55) core[i]=1;
+  const {lbl,blobs}=label(core);
+  // 기준 core = 터치 지점에서 가장 가까운 core
+  let ref=-1,best=1e9;
+  blobs.forEach((px,k)=>{for(let j=0;j<px.length;j+=4){const p=px[j],d=Math.hypot(p%W-seed.x,(p/W|0)-seed.y);if(d<best){best=d;ref=k}}});
+  let unit=blobs[ref].length;
+  const sim=blobs.map(b=>b.length).filter(a=>a>unit*0.6&&a<unit*1.5).sort((a,b)=>a-b);
+  if(sim.length>=3) unit=sim[sim.length>>1];
+  // 7) core마다 개수 = 면적/기준 면적 (끝끼리 붙어 core가 이어진 경우 대비)
+  const pts=[];
+  blobs.forEach(px=>{
+    const ratio=px.length/unit; if(ratio<0.35) return;
+    const k=ratio<1.7?1:Math.round(ratio-0.15);
+    kmeans(px,k).forEach(c=>pts.push({x:c.x,y:c.y,merged:k>1}));
+  });
+  return {pts,r:r0*1.6,mask};
+}
+
+function label(m){
+  const N=W*H,lbl=new Int32Array(N).fill(-1),blobs=[],stack=new Int32Array(N);
+  for(let s=0;s<N;s++){
+    if(!m[s]||lbl[s]>=0)continue;
+    let sp=0;stack[sp++]=s;lbl[s]=blobs.length;const px=[];
+    while(sp){const p=stack[--sp];px.push(p);const x=p%W,y=(p/W)|0;
+      if(x>0&&m[p-1]&&lbl[p-1]<0){lbl[p-1]=blobs.length;stack[sp++]=p-1}
+      if(x<W-1&&m[p+1]&&lbl[p+1]<0){lbl[p+1]=blobs.length;stack[sp++]=p+1}
+      if(y>0&&m[p-W]&&lbl[p-W]<0){lbl[p-W]=blobs.length;stack[sp++]=p-W}
+      if(y<H-1&&m[p+W]&&lbl[p+W]<0){lbl[p+W]=blobs.length;stack[sp++]=p+W}}
+    blobs.push(px);
+  }
+  return {lbl,blobs};
+}
+function fillHoles(m){
+  // 테두리에서 닿지 않는 빈 영역(구멍)을 채움 — 크기가 작은 구멍만
+  const inv=new Uint8Array(m.length);for(let i=0;i<m.length;i++)inv[i]=m[i]?0:1;
+  const {blobs}=label(inv),o=m.slice();
+  blobs.forEach(px=>{if(px.length<W*H*0.002&&!px.some(p=>{const x=p%W,y=p/W|0;return x==0||y==0||x==W-1||y==H-1}))px.forEach(p=>o[p]=1)});
+  return o;
+}
+function distT(m){
+  // 3-4 chamfer 거리 변환 (단위: 픽셀)
+  const d=new Float32Array(W*H);for(let i=0;i<W*H;i++)d[i]=m[i]?1e9:0;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;if(!d[i])continue;let v=d[i];
+    if(x>0)v=Math.min(v,d[i-1]+1);if(y>0){v=Math.min(v,d[i-W]+1);if(x>0)v=Math.min(v,d[i-W-1]+1.41);if(x<W-1)v=Math.min(v,d[i-W+1]+1.41)}
+    if(x==0||y==0)v=Math.min(v,1);d[i]=v}
+  for(let y=H-1;y>=0;y--)for(let x=W-1;x>=0;x--){const i=y*W+x;if(!d[i])continue;let v=d[i];
+    if(x<W-1)v=Math.min(v,d[i+1]+1);if(y<H-1){v=Math.min(v,d[i+W]+1);if(x<W-1)v=Math.min(v,d[i+W+1]+1.41);if(x>0)v=Math.min(v,d[i+W-1]+1.41)}
+    if(x==W-1||y==H-1)v=Math.min(v,1);d[i]=v}
+  return d;
+}
+
+function erode(m){const o=new Uint8Array(m.length);for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;o[i]=m[i]&m[i-1]&m[i+1]&m[i-W]&m[i+W]}return o}
+function dilate(m){const o=new Uint8Array(m.length);for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;o[i]=m[i]|m[i-1]|m[i+1]|m[i-W]|m[i+W]}return o}
+
+function kmeans(px,k){
+  const P=px.map(p=>({x:p%W,y:(p/W)|0}));
+  if(k===1){let sx=0,sy=0;P.forEach(p=>{sx+=p.x;sy+=p.y});return[{x:sx/P.length,y:sy/P.length}]}
+  // k-means++ 초기화
+  const C=[P[(Math.random()*P.length)|0]];
+  while(C.length<k){let far=null,fd=-1;for(let i=0;i<P.length;i+=3){const p=P[i];let d=1e18;C.forEach(c=>{d=Math.min(d,(p.x-c.x)**2+(p.y-c.y)**2)});if(d>fd){fd=d;far=p}}C.push({...far})}
+  for(let it=0;it<12;it++){
+    const s=C.map(()=>({x:0,y:0,n:0}));
+    for(let i=0;i<P.length;i+=2){const p=P[i];let bi=0,bd=1e18;C.forEach((c,j)=>{const d=(p.x-c.x)**2+(p.y-c.y)**2;if(d<bd){bd=d;bi=j}});s[bi].x+=p.x;s[bi].y+=p.y;s[bi].n++}
+    s.forEach((v,j)=>{if(v.n){C[j]={x:v.x/v.n,y:v.y/v.n}}});
+  }
+  return C;
+}
+
+/* ---------- 그리기 ---------- */
+function draw(){
+  ctx.putImageData(photo,0,0);
+  // 인식 영역 살짝 강조
+  const ov=ctx.getImageData(0,0,W,H), d=ov.data;
+  for(let i=0;i<W*H;i++) if(!result.mask[i]){d[i*4]*=0.45;d[i*4+1]*=0.45;d[i*4+2]*=0.45}
+  ctx.putImageData(ov,0,0);
+  const r=Math.max(7,Math.min(20,result.r*0.45));
+  let n=0;
+  const mark=(p,col)=>{
+    n++;
+    ctx.beginPath();ctx.arc(p.x,p.y,r,0,7);ctx.fillStyle=col;ctx.fill();
+    ctx.lineWidth=2.5;ctx.strokeStyle='#000';ctx.stroke();
+    ctx.fillStyle='#000';ctx.font=`900 ${Math.round(r*(n>99?0.9:1.1))}px sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(n,p.x,p.y+1);
+  };
+  result.pts.filter(p=>!p.off).forEach(p=>mark(p,p.merged?'#e879f9':'#22c55e'));
+  manual.forEach(p=>mark(p,'#38bdf8'));
+  badge.innerHTML=`${n}<span>개</span>`; badge.style.display='block';
+  result.total=n;
+}
+
+function save(){
+  const c=document.createElement('canvas');c.width=W;c.height=H+70;const g=c.getContext('2d');
+  g.drawImage(view,0,0);g.fillStyle='#facc15';g.fillRect(0,H,W,70);
+  g.fillStyle='#111';g.font='900 38px sans-serif';g.textBaseline='middle';
+  g.fillText(`총 ${result.total}개`,20,H+35);
+  g.font='600 18px sans-serif';g.textAlign='right';g.fillText(new Date().toLocaleString('ko-KR'),W-20,H+35);
+  const a=document.createElement('a');a.download=`약계수_${result.total}개_${Date.now()}.png`;a.href=c.toDataURL('image/png');a.click();
+}
+
+stepCapture();
+</script>
+</body>
+</html>
