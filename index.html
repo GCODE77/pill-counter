@@ -117,6 +117,18 @@
   .inv-hist{width:100%;border-collapse:collapse;font-size:15px}
   .inv-hist td{padding:6px 4px;border-bottom:1px solid var(--line)}
   .inv-hist td:last-child{text-align:right;font-weight:700}
+  /* 바코드 스캐너 */
+  .scan{position:fixed;inset:0;height:100dvh;background:#000;z-index:60;display:none;flex-direction:column;justify-content:flex-end}
+  .scan video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .scan .frame{position:absolute;left:50%;top:42%;width:72vw;max-width:420px;height:36vw;max-height:220px;transform:translate(-50%,-50%);
+    border:4px solid var(--primary);border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)}
+  .scan .msg{position:absolute;left:0;right:0;top:calc(42% - 170px);text-align:center;font-size:19px;font-weight:800;padding:0 16px;text-shadow:0 2px 6px #000}
+  .scan .bar{position:relative;display:flex;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:#0b1222}
+  .name-with-btn{display:flex;gap:8px}
+  .name-with-btn .text{flex:1;min-width:0}
+  .name-with-btn button{flex:none;min-height:54px;font-size:16px;padding:8px 12px}
+  .scan-info{margin-top:8px;font-size:14px;color:var(--muted);background:#0b1222;border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
+  .exp-warn{color:#fecaca!important;font-weight:800}
   /* 사용법 */
   .help h2{font-size:21px;margin:0 0 8px;color:var(--primary)}
   .help ol,.help ul{margin:0;padding-left:22px;font-size:17px;line-height:1.7}
@@ -157,7 +169,10 @@
 
   <div class="name-row" id="nameRow">
     <label for="drugName">약 이름 (선택)</label>
-    <input class="text" id="drugName" placeholder="예) 타이레놀 500mg" list="drugList" autocomplete="off">
+    <div class="name-with-btn">
+      <input class="text" id="drugName" placeholder="예) 타이레놀 500mg" list="drugList" autocomplete="off">
+      <button class="secondary" id="nameScan">▦ 바코드</button>
+    </div>
     <datalist id="drugList"></datalist>
   </div>
   <div class="actions" id="actions"></div>
@@ -175,6 +190,7 @@
   <section class="page hidden" id="pgInv">
     <div class="inv-bar">
       <input class="text" id="invQ" placeholder="🔍 약품명 검색">
+      <button class="secondary" id="invScan" title="바코드로 약품 찾기">▦ 바코드</button>
       <button class="secondary" id="invExport" title="엑셀(CSV)로 내보내기">⬇ 엑셀</button>
     </div>
     <button class="primary" id="invAdd" style="flex:none;margin-bottom:10px">＋ 약품 등록</button>
@@ -246,6 +262,17 @@
       </ol>
     </div>
     <div class="card">
+      <h2>▦ 바코드로 약품 찾기</h2>
+      <ol>
+        <li><b>재고</b> 탭 → <b>▦ 바코드</b> → 약통·포장의 바코드(일반 바코드 또는 네모난 2D 바코드)를 노란 칸에 맞춥니다.</li>
+        <li><b>처음 보는 바코드</b>면 등록 창이 열립니다. 약품명을 입력하고 <b>✅ 등록</b>하면 바코드가 그 약품에 연결됩니다.</li>
+        <li>다음부터는 바코드만 비추면 <b>약품명이 자동으로 찾아지고</b> 재고 조사 창이 바로 열립니다.</li>
+        <li>2D 바코드에 들어 있는 <b>유통기한·제조번호</b>도 읽어서 함께 저장합니다. 유통기한이 90일 이내면 목록에 <b>(임박)</b>으로 표시됩니다.</li>
+        <li>계수 화면의 약 이름 칸 옆 <b>▦ 바코드</b>로도 약 이름을 채울 수 있습니다.</li>
+        <li>바코드가 잘 안 읽히면 <b>⌨ 숫자 직접 입력</b>으로 바코드 아래 숫자를 넣으세요.</li>
+      </ol>
+    </div>
+    <div class="card">
       <h2>기록 · 홈 화면 추가</h2>
       <ul>
         <li><b>기록</b> 탭: 저장한 결과를 최신순으로 보고, 약 이름으로 검색합니다. 항목을 누르면 사진 확대·이미지 저장·삭제가 됩니다.</li>
@@ -264,6 +291,15 @@
   <button data-pg="pgHelp"><i>❓</i>사용법</button>
 </nav>
 <div class="toast" id="toast"></div>
+<div class="scan" id="scan">
+  <video id="scanVideo" playsinline muted></video>
+  <div class="frame"></div>
+  <div class="msg" id="scanMsg"></div>
+  <div class="bar">
+    <button class="secondary" id="scanManual">⌨ 직접 입력</button>
+    <button class="primary" id="scanCancel">닫기</button>
+  </div>
+</div>
 <div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
 
 <script>
@@ -675,13 +711,16 @@ function renderInv(){
     return `<li data-id="${d.id}">
       <div class="inv-top"><div class="nm">${esc(d.name)}</div><div class="cnt">${c?fmtN(c.total):'-'}<small>정</small></div></div>
       <div class="inv-rows">${rows}</div>
-      <div class="dt">${c?'조사일 '+fmtD(c.date):''}</div>
+      <div class="dt">${c?'조사일 '+fmtD(c.date):''}${c&&c.exp?` · <span class="${expSoon(c.exp)?'exp-warn':''}">유통기한 ${c.exp}${expSoon(c.exp)==='over'?' (지남)':expSoon(c.exp)?' (임박)':''}</span>`:''}</div>
     </li>`}).join(''):`<div class="empty">${drugs.length?'검색 결과가 없습니다':'등록된 약품이 없습니다.<br><b>＋ 약품 등록</b>을 눌러 시작하세요.'}</div>`;
 }
 $('invQ').oninput=renderInv;
 $('invList').onclick=e=>{const li=e.target.closest('li');if(li)openInv(li.dataset.id)};
 $('invAdd').onclick=()=>openInv(null);
 $('invExport').onclick=exportInv;
+$('invScan').onclick=scanToInventory;
+$('nameScan').onclick=scanToCountName;
+const expSoon=e=>{if(!e)return '';const d=new Date(e.replace('말일','28'));const days=(d-new Date())/864e5;return days<0?'over':days<90?'soon':''};
 
 function openInv(id,keepDraft){
   if(!keepDraft){
@@ -689,7 +728,7 @@ function openInv(id,keepDraft){
     const last=d&&d.checks[0];
     draft={id:d?d.id:'d'+Date.now(),isNew:!d,name:d?d.name:'',
       packs:(d?d.packs:[{size:100,label:'병'}]).map(p=>({...p,n:last?(last.packs.find(q=>q.size===p.size&&q.label===p.label)||{n:0}).n:0})),
-      loose:last?last.loose:0,halves:last?last.halves:0,history:d?d.checks:[]};
+      loose:last?last.loose:0,halves:last?last.halves:0,history:d?d.checks:[],barcodes:d?(d.barcodes||[]):[]};
   }
   renderInvModal();
   $('modal').style.display='flex';
@@ -701,7 +740,12 @@ function renderInvModal(){
   const hist=draft.history.slice(0,10).map(c=>`<tr><td>${fmtD(c.date)}</td><td>${fmtN(c.total)}정</td></tr>`).join('');
   $('modalBox').innerHTML=`
     <div class="inv-head"><h2>${draft.isNew?'약품 등록':'재고 조사'}</h2><button class="x" id="iClose">✕</button></div>
-    <input class="text" id="iName" placeholder="약품명 (예: 알닥톤필름코팅정 25mg)" value="${esc(draft.name)}" ${draft.isNew?'':'readonly'}>
+    <div class="name-with-btn">
+      <input class="text" id="iName" placeholder="약품명 (예: 알닥톤필름코팅정 25mg)" value="${esc(draft.name)}" ${draft.isNew?'':'readonly'}>
+      <button class="secondary" id="iScan">▦ 바코드</button>
+    </div>
+    ${draft.scan?`<div class="scan-info">${codeInfo(draft.scan)}${!draft.isNew||findDrugByCode(draft.scan.code)?'':'<br>➜ 약품명을 입력하고 등록하면 다음부터 이 바코드로 바로 찾습니다'}</div>`:''}
+    ${!draft.scan&&draft.barcodes&&draft.barcodes.length?`<div class="scan-info">연결된 바코드 ${draft.barcodes.join(', ')}</div>`:''}
     <div class="inv-total"><span>${new Date().toLocaleDateString('ko-KR')} 기준</span><b>${fmtN(t)}<small>정</small></b></div>
     ${draft.packs.map((p,i)=>`
       <div class="inv-line">
@@ -727,6 +771,11 @@ function renderInvModal(){
     </div>
     ${hist?`<h3 class="inv-h3">이전 조사</h3><table class="inv-hist">${hist}</table>`:''}`;
   $('iName').oninput=e=>draft.name=e.target.value;
+  $('iScan').onclick=()=>{const keep=draft;closeModal();openScanner(b=>{
+    const d=findDrugByCode(b.code);
+    if(d&&d.id!==keep.id){openInv(d.id);draft.scan=b;renderInvModal();toast(`🔎 이미 등록된 약품: ${d.name}`);return}
+    draft=keep;draft.scan=b;openInv(keep.id,true);
+  })};
   $('modalBox').querySelectorAll('.stepper button').forEach(b=>b.onclick=()=>{
     const d=+b.dataset.d;
     if(b.dataset.k==='pack'){const p=draft.packs[+b.dataset.i];p.n=Math.max(0,p.n+d)}else draft[b.dataset.k]=Math.max(0,draft[b.dataset.k]+d);
@@ -766,7 +815,9 @@ function saveInv(){
   let d=drugs.find(x=>x.id===draft.id);
   if(!d){d={id:draft.id,name,packs:[],checks:[]};drugs.push(d)}
   d.packs=draft.packs.map(({size,label})=>({size,label}));
+  if(draft.scan){ d.barcodes=[...new Set([...(d.barcodes||[]),draft.scan.code])]; }
   const c={date:new Date().toISOString(),packs:draft.packs.map(({size,label,n})=>({size,label,n})),loose:draft.loose,halves:draft.halves};
+  if(draft.scan){c.exp=draft.scan.exp||'';c.lot=draft.scan.lot||''}
   c.total=totalOf(c); d.checks.unshift(c); d.updated=c.date;
   storeInv(drugs); draft=null; closeModal(); renderInv();
   toast(`✅ ${name} ${fmtN(c.total)}정 등록`);
@@ -782,11 +833,105 @@ function applyCountToInv(){
 
 function exportInv(){
   const drugs=loadInv(); if(!drugs.length){toast('내보낼 재고가 없습니다');return}
-  const rows=[['약품명','조사일시','포장 내역','낱알','반알','총 정 수']];
-  drugs.forEach(d=>d.checks.forEach(c=>rows.push([d.name,fmt(c.date),c.packs.filter(p=>p.n).map(p=>`${p.size}정/${p.label}×${p.n}`).join(' + '),c.loose,c.halves,c.total])));
+  const rows=[['약품명','바코드','조사일시','포장 내역','낱알','반알','총 정 수','유통기한','제조번호']];
+  drugs.forEach(d=>d.checks.forEach(c=>rows.push([d.name,(d.barcodes||[]).join(' '),fmt(c.date),c.packs.filter(p=>p.n).map(p=>`${p.size}정/${p.label}×${p.n}`).join(' + '),c.loose,c.halves,c.total,c.exp||'',c.lot||''])));
   const csv='﻿'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`필카운터_재고_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+/* ---------- 바코드 스캔 (EAN-13 · GS1 DataMatrix) ---------- */
+// GS1 해석: (01)상품코드 (17)유통기한 (10)제조번호 (21)일련번호
+function parseBarcode(raw){
+  let t=String(raw).trim().replace(/^\]d2|^\]C1|^\]Q3/,'');
+  if(/^\d{13}$/.test(t)) return {code:t};                     // 일반 EAN-13 (880…)
+  if(/^\d{8}$/.test(t)) return {code:t};
+  const out={}, GS='\x1d';
+  t=t.replace(/\((\d{2,4})\)/g,(m,ai)=>GS+ai).replace(/^\x1d/,''); // (01)… 형태도 처리
+  const FIX={'01':14,'17':6,'11':6,'15':6};
+  while(t.length>=2){
+    const ai=t.slice(0,2); t=t.slice(2);
+    if(FIX[ai]){ out[ai]=t.slice(0,FIX[ai]); t=t.slice(FIX[ai]).replace(/^\x1d/,''); }
+    else if(ai==='10'||ai==='21'){ const k=t.indexOf(GS); out[ai]=k<0?t:t.slice(0,k); t=k<0?'':t.slice(k+1); }
+    else break;
+  }
+  if(!out['01']) return /^\d{8,14}$/.test(raw)?{code:String(raw)}:null;
+  const g=out['01'], ymd=s=>s&&`20${s.slice(0,2)}-${s.slice(2,4)}-${s.slice(4,6)==='00'?'말일':s.slice(4,6)}`;
+  return {code:g.startsWith('0')?g.slice(1):g, exp:ymd(out['17']), lot:out['10']||'', serial:out['21']||''};
+}
+const findDrugByCode=code=>loadInv().find(d=>(d.barcodes||[]).includes(code));
+
+let scanStream=null, scanTimer=null, zx=null;
+function loadZXing(){
+  return window.ZXing?Promise.resolve():new Promise((ok,fail)=>{const s=document.createElement('script');s.src='vendor/zxing.min.js';s.onload=ok;s.onerror=fail;document.head.appendChild(s)});
+}
+async function openScanner(onResult){
+  stopCam();
+  const ov=$('scan'); ov.style.display='flex'; $('scanMsg').textContent='바코드를 네모 칸 안에 맞춰 주세요';
+  const done=r=>{closeScanner(); if(navigator.vibrate)navigator.vibrate(80); onResult(r)};
+  $('scanCancel').onclick=closeScanner;
+  $('scanManual').onclick=()=>{
+    const v=prompt('바코드 아래 숫자를 입력하세요 (13자리, 예: 8806…)');
+    if(!v)return; const r=parseBarcode(v.replace(/\D/g,'')); if(r)done(r); else toast('바코드 숫자를 다시 확인하세요');
+  };
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+  }catch(e){ $('scanMsg').textContent='카메라를 쓸 수 없습니다. 아래 "직접 입력"으로 숫자를 넣으세요.'; return; }
+  const v=$('scanVideo'); v.srcObject=scanStream; await v.play().catch(()=>{});
+  // 1순위: 브라우저 내장 인식기(안드로이드 크롬), 2순위: ZXing
+  let detect=null;
+  if('BarcodeDetector' in window){
+    try{
+      const fm=await BarcodeDetector.getSupportedFormats();
+      const want=['data_matrix','ean_13','ean_8','code_128','qr_code'].filter(f=>fm.includes(f));
+      if(want.includes('data_matrix')||want.includes('ean_13')){const bd=new BarcodeDetector({formats:want});detect=async()=>{const r=await bd.detect(v);return r[0]&&r[0].rawValue}}
+    }catch(e){}
+  }
+  if(!detect){
+    try{await loadZXing()}catch(e){$('scanMsg').textContent='인식 모듈을 불러오지 못했습니다. 숫자를 직접 입력하세요.';return}
+    const hints=new Map(), F=ZXing.BarcodeFormat;
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[F.DATA_MATRIX,F.EAN_13,F.EAN_8,F.CODE_128,F.QR_CODE]);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+    zx=new ZXing.MultiFormatReader(); zx.setHints(hints);
+    const c=document.createElement('canvas'), g=c.getContext('2d',{willReadFrequently:true});
+    detect=async()=>{
+      if(!v.videoWidth)return null;
+      // 가운데 영역만 잘라서 인식 (빠르고 정확)
+      const sw=Math.round(v.videoWidth*0.7), sh=Math.round(v.videoHeight*0.7);
+      c.width=Math.min(sw,1000); c.height=Math.round(sh*c.width/sw);
+      g.drawImage(v,(v.videoWidth-sw)/2,(v.videoHeight-sh)/2,sw,sh,0,0,c.width,c.height);
+      try{const bmp=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(c)));return zx.decode(bmp).getText()}catch(e){return null}
+    };
+  }
+  const loop=async()=>{
+    if(!scanStream)return;
+    try{const raw=await detect(); if(raw){const r=parseBarcode(raw); if(r){done(r);return}}}catch(e){}
+    scanTimer=setTimeout(loop,150);
+  };
+  loop();
+}
+function closeScanner(){
+  clearTimeout(scanTimer);
+  if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null}
+  $('scan').style.display='none';
+}
+const codeInfo=b=>b?[`바코드 ${b.code}`,b.exp&&`유통기한 ${b.exp}`,b.lot&&`제조번호 ${b.lot}`].filter(Boolean).join(' · '):'';
+
+// 재고 탭: 바코드로 약품 찾기 → 있으면 열고, 없으면 새로 등록
+function scanToInventory(){
+  openScanner(b=>{
+    const d=findDrugByCode(b.code);
+    if(d){ openInv(d.id); draft.scan=b; renderInvModal(); toast(`🔎 ${d.name}`); }
+    else{ openInv(null); draft.scan=b; renderInvModal(); toast('처음 보는 바코드입니다. 약품명을 입력해 연결하세요'); }
+  });
+}
+// 계수 화면: 바코드로 약 이름 채우기
+function scanToCountName(){
+  openScanner(b=>{
+    const d=findDrugByCode(b.code);
+    if(d){ $('drugName').value=d.name; toast(`🔎 ${d.name}`); }
+    else{ $('drugName').value=''; $('drugName').focus(); toast('등록되지 않은 바코드입니다. 재고 탭에서 약품과 연결해 주세요'); }
+  });
 }
 
 renderHistory();
