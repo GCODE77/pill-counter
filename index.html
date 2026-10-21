@@ -144,14 +144,14 @@
 </head>
 <body>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v2.1</small></div></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v2.2</small></div></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
 
   <div class="steps">
     <div class="step" id="s1">① 촬영</div>
-    <div class="step" id="s2">② 기준 선택</div>
+    <div class="step" id="s2">② 자동 계수</div>
     <div class="step" id="s3">③ 결과</div>
   </div>
 
@@ -227,10 +227,11 @@
       </ol>
     </div>
     <div class="card">
-      <h2>② 기준 약 선택</h2>
+      <h2>② 자동 계수</h2>
       <ol>
-        <li>셀 약 중 <b>다른 약과 떨어져 있는 온전한 한 알</b>을 손가락으로 터치합니다. (반알·조각은 세지 않습니다)</li>
-        <li>바로 개수를 세기 시작합니다.</li>
+        <li>촬영하면 <b>터치 없이 자동으로</b> 셉니다. 사진에서 같은 모양·색으로 가장 많이 반복되는 물체를 약으로 판단합니다.</li>
+        <li>여러 종류의 약이 섞여 있거나 다른 약을 세고 싶으면, 결과 화면의 <b>🎯 직접 선택</b>을 누르고 그 약 한 알을 터치하세요.</li>
+        <li>실시간 화면에서도 자동으로 세며, 원하는 약을 터치하면 그 약으로 고정됩니다.</li>
       </ol>
     </div>
     <div class="card">
@@ -289,7 +290,7 @@
     <div class="card">
       <h2>화면이 예전 그대로일 때</h2>
       <ul>
-        <li>맨 위 제목 옆 버전이 <b>v2.1</b>이 아니면 예전 화면이 저장된 것입니다.</li>
+        <li>맨 위 제목 옆 버전이 <b>v2.2</b>이 아니면 예전 화면이 저장된 것입니다.</li>
         <li>브라우저에서 <b>새로고침</b>하거나, 홈 화면 앱이면 <b>앱을 완전히 닫았다가</b> 다시 여세요. 업데이트 후 최대 10분 정도 걸릴 수 있습니다.</li>
       </ul>
     </div>
@@ -360,7 +361,7 @@ function captureButtons(camOk){
   actions.innerHTML='';
   if(camOk) btn(liveOn?'⚡ 실시간 켜짐':'⚡ 실시간 꺼짐','secondary toggle'+(liveOn?' on':''),toggleLive);
   btn('🖼 불러오기','secondary',()=>$('file').click());
-  btn('📷 촬영','primary',()=>{ if(!camOk) return $('file').click(); if(live&&seed) confirmLive(); else capture(); });
+  btn('📷 촬영','primary',()=>{ if(!camOk) return $('file').click(); if(live) confirmLive(); else capture(); });
 }
 function toggleLive(){
   liveOn=!liveOn; localStorage.setItem('pc.live',liveOn?'1':'0');
@@ -381,9 +382,10 @@ function startLive(){
   if(!video.videoWidth){ setTimeout(()=>{ if(liveOn&&stream&&!live&&$('s1').classList.contains('active')) startLive() },200); return; }
   live={t:0}; seed=null; manual=[]; result=null;
   video.classList.add('hidden'); view.classList.remove('hidden'); view.classList.add('live');
-  guide.innerHTML='⚡ 실시간 — 화면에서 약 <u>한 알</u>을 터치하세요<small>숫자가 안정되면 <b>📷 촬영</b>을 누르세요. 고화질로 다시 정밀하게 셉니다</small>';
+  live.auto=true;
+  guide.innerHTML='⚡ 실시간 자동 계수 중<small>숫자가 안정되면 <b>📷 촬영</b>을 누르세요(고화질로 정밀 계수) · 다른 약을 세려면 그 약을 터치</small>';
   // 개수 칸을 미리 잡아 두어 화면이 밀리지 않게 함
-  badge.style.display='block'; badge.innerHTML='<span class="wait">👆 약 한 알을 터치</span>';
+  badge.style.display='block'; badge.innerHTML='<span class="wait">약을 비춰 주세요</span>';
   liveTick();
 }
 function liveTick(){
@@ -393,24 +395,25 @@ function liveTick(){
     const k=LIVE_SIDE/Math.max(vw,vh); W=Math.round(vw*k); H=Math.round(vh*k);
     if(view.width!==W||view.height!==H){view.width=W;view.height=H}
     ctx.drawImage(video,0,0,W,H); photo=ctx.getImageData(0,0,W,H);
+    lab=toLab(photo.data);
+    if(live.auto) seed=autoSeed();
     if(seed){
       try{
-        lab=toLab(photo.data); result=count(); draw();
+        result=count(); draw();
         // 기준 약이 움직여도 따라가도록: 가장 가까운 약 위치로 기준점 이동
         let best=null,bd=1e9; result.pts.forEach(p=>{if(p.type==='제외')return;const d=Math.hypot(p.x-seed.x,p.y-seed.y);if(d<bd){bd=d;best=p}});
-        if(best) seed={x:Math.round(best.x),y:Math.round(best.y)};
+        if(best&&!live.auto) seed={x:Math.round(best.x),y:Math.round(best.y)};
         ctx.lineWidth=3;ctx.strokeStyle='#facc15';ctx.beginPath();ctx.arc(seed.x,seed.y,Math.max(10,result.r*0.9),0,7);ctx.stroke();
       }catch(e){}
-    }
+    }else{ badge.innerHTML='<span class="wait">약을 비춰 주세요</span>'; }
   }
   live.t=setTimeout(liveTick,60);
 }
 function stopLive(){ if(live){clearTimeout(live.t);live=null} }
 function confirmLive(){
-  if(!seed){toast('먼저 화면에서 약 한 알을 터치하세요');return}
-  const rx=seed.x/W, ry=seed.y/H; stopLive();
-  loadSource(video,video.videoWidth,video.videoHeight);
-  seed={x:Math.round(rx*W),y:Math.round(ry*H)}; manual=[]; run();
+  const manualSeed=live&&!live.auto&&seed, rx=seed?seed.x/W:0, ry=seed?seed.y/H:0; stopLive();
+  loadSource(video,video.videoWidth,video.videoHeight);           // 고화질 자동 계수
+  if(manualSeed){ seed={x:Math.round(rx*W),y:Math.round(ry*H)}; manual=[]; run(); }
 }
 
 function capture(){
@@ -427,22 +430,23 @@ function loadSource(src,w,h){
   const s=MAXSIDE/Math.max(w,h); W=Math.round(w*s); H=Math.round(h*s);
   view.width=W; view.height=H; ctx.drawImage(src,0,0,W,H);
   photo=ctx.getImageData(0,0,W,H); lab=toLab(photo.data);
-  stopCam(); view.classList.remove('hidden'); stepPick();
+  stopCam(); view.classList.remove('hidden');
+  const a=autoSeed(); if(a){ seed=a; manual=[]; run(); } else stepPick();
 }
 
 function stepPick(){
   $('nameRow').style.display='none';
   setStep(2); ctx.putImageData(photo,0,0); badge.style.display='none'; $('tune').style.display='none';
-  guide.innerHTML='👆 셀 약 <u>한 개</u>를 손가락으로 터치하세요<small>터치한 약과 같은 모양·색상의 약만 셉니다</small>';
+  guide.innerHTML='👆 셀 약 <u>한 개</u>를 터치하세요<small>자동으로 고른 약이 아니거나 여러 종류가 섞여 있을 때 사용합니다</small>';
   actions.innerHTML=''; btn('↺ 다시 촬영','secondary',stepCapture);
 }
 
 function stepResult(){
   setStep(3); $('tune').style.display='block';
-  guide.innerHTML='결과를 확인하세요<small>빠진 약은 터치해서 추가, 잘못 잡힌 표시는 터치해서 삭제</small>';
+  guide.innerHTML='자동으로 셌습니다 — 결과를 확인하세요<small>빠진 약은 터치해서 추가, 잘못 잡힌 표시는 터치해서 삭제 · 다른 약을 세려면 🎯 직접 선택</small>';
   actions.innerHTML='';
   btn('↺ 다시 촬영','secondary',stepCapture);
-  btn('🎯 기준 다시 선택','secondary',stepPick);
+  btn('🎯 직접 선택','secondary',stepPick);
   if(invPending) btn(`📦 ${invPending.name} 낱알로 반영`,'primary',applyCountToInv);
   else btn('✅ 기록 저장','primary',saveRecord);
   $('nameRow').style.display=invPending?'none':'block';
@@ -453,7 +457,7 @@ video.addEventListener('click',capture);
 view.addEventListener('click',e=>{
   const r=view.getBoundingClientRect();
   const x=Math.round((e.clientX-r.left)*W/r.width), y=Math.round((e.clientY-r.top)*H/r.height);
-  if(live){ seed={x,y}; return; }
+  if(live){ seed={x,y}; live.auto=false; return; }
   if($('s2').classList.contains('active')){ seed={x,y}; manual=[]; run(); return; }
   if(!result) return;
   const rad=Math.max(12,result.r*0.8);
@@ -496,6 +500,13 @@ function count(){
     const i=(y*W+x)*3; L+=lab[i];A+=lab[i+1];B+=lab[i+2];c++;
   }
   L/=c;A/=c;B/=c;
+  // 기준색 다듬기: 터치한 한 점이 아니라 '비슷한 색 전체'의 평균으로 (그림자·반사 쪽을 눌러도 결과가 같게)
+  for(let it=0;it<5;it++){
+    let sl=0,sa=0,sb=0,n=0;
+    for(let i=0;i<N;i+=2){const dl=(lab[i*3]-L)*0.5,da=lab[i*3+1]-A,db=lab[i*3+2]-B;
+      if(dl*dl+da*da+db*db<(it<2?400:196)){sl+=lab[i*3];sa+=lab[i*3+1];sb+=lab[i*3+2];n++}}
+    if(n>50){L=sl/n;A=sa/n;B=sb/n}
+  }
   // 2) 색 거리 지도 → 히스토그램의 첫 골짜기를 자동 경계값으로 사용 (조명 차이에 강함)
   const dmap=new Float32Array(N), hist=new Float32Array(121);
   for(let i=0;i<N;i++){
@@ -530,6 +541,10 @@ function count(){
   let r0=0; const R=25;
   for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const x=seed.x+dx,y=seed.y+dy;if(x<0||y<0||x>=W||y>=H)continue;r0=Math.max(r0,dist[y*W+x])}
   if(r0<2) return {pts:[],r:10,mask};
+  // 약 두께도 사진 전체에서 가장 흔한 값으로 (기준 약이 무더기 속에 있어도 흔들리지 않게)
+  { const fl=label(mask), md=[];
+    fl.blobs.forEach(px=>{ if(px.length<8) return; let m=0; for(const p of px) if(dist[p]>m) m=dist[p]; md.push(m*m); });
+    const c=commonSize(md,r0*r0); if(c>4) r0=Math.sqrt(c); }
   // 6) 약 중심부(core)만 남겨 붙은 약을 분리
   const core=new Uint8Array(N); for(let i=0;i<N;i++) if(dist[i]>r0*0.55) core[i]=1;
   const {lbl,blobs}=label(core);
@@ -537,8 +552,8 @@ function count(){
   let ref=-1,best=1e9;
   blobs.forEach((px,k)=>{for(let j=0;j<px.length;j+=4){const p=px[j],d=Math.hypot(p%W-seed.x,(p/W|0)-seed.y);if(d<best){best=d;ref=k}}});
   let unit=blobs[ref].length;
-  const sim=blobs.map(b=>b.length).filter(a=>a>unit*0.6&&a<unit*1.5).sort((a,b)=>a-b);
-  if(sim.length>=3) unit=sim[sim.length>>1];
+  // 1알 크기 = 사진 전체에서 '가장 흔한' 중심부 크기 (터치한 약이 글씨·반사로 쪼개져 작게 잡혀도 흔들리지 않음)
+  unit=commonSize(blobs.map(b=>b.length),unit);
   // 7) 약 덩어리(전체 모양) 단위로 분석
   const full=label(mask);
   const coresOf=full.blobs.map(()=>[]);
@@ -551,8 +566,9 @@ function count(){
     return {clip:clip/px.length,rough:edge*edge/(4*Math.PI*px.length)}};
   const info=full.blobs.map((px,f)=>({px,f,shape:pca(px),...blobFeat(px),n:coresOf[f].reduce((s,k)=>s+coreK(blobs[k]),0)}));
   // 기준 약 1알의 모양 = 터치한 약과 비슷한 '단독' 덩어리들의 중앙값
-  const sf=full.lbl[blobs[ref][0]], sInfo=info[sf], sArea=sInfo.px.length/Math.max(1,sInfo.n);
-  const singles=info.filter(o=>o.n===1&&o.px.length>sArea*0.6&&o.px.length<sArea*1.5);
+  const sf=full.lbl[blobs[ref][0]], sInfo=info[sf];
+  const sArea=commonSize(info.filter(o=>o.n===1).map(o=>o.px.length),sInfo.px.length/Math.max(1,sInfo.n));
+  const singles=info.filter(o=>o.n===1&&o.px.length>sArea*0.7&&o.px.length<sArea*1.4);
   const med=f=>{const v=singles.map(f).sort((a,b)=>a-b);return v[v.length>>1]};
   const Ap=singles.length>=3?med(o=>o.px.length):sArea;
   const Lp=singles.length>=3?med(o=>o.shape.len):sInfo.shape.len;
@@ -603,6 +619,58 @@ function count(){
     centers.forEach(c=>pts.push({x:c.x,y:c.y,type}));
   });
   return {pts,stat,r:r0*1.6,mask};
+}
+
+function commonSize(areas,hint){
+  // 크기 분포(로그 눈금)에서 가장 많이 몰린 구간 → 그 근처 값들의 중앙값
+  const a=areas.filter(v=>v>=Math.max(4,hint*0.25)); if(a.length<3) return hint;
+  const bins=new Map(); a.forEach(v=>{const b=Math.round(Math.log(v)/0.12);bins.set(b,(bins.get(b)||0)+1)});
+  let best=0,bc=-1; bins.forEach((c,b)=>{const sc=c+0.6*((bins.get(b-1)||0)+(bins.get(b+1)||0));if(sc>bc){bc=sc;best=b}});
+  const m=Math.exp(best*0.12), near=a.filter(v=>v>m*0.75&&v<m*1.33).sort((x,y)=>x-y);
+  return near.length?near[near.length>>1]:hint;
+}
+
+/* 자동 기준 찾기: 사진에서 '같은 크기·색·모양으로 가장 많이 반복되는 물체'를 약으로 보고 그 중심을 기준점으로 */
+function autoSeed(){
+  // 속도를 위해 작은 사본(긴 변 240px)에서 찾고, 좌표만 원래 크기로 되돌림
+  const k=Math.min(1,240/Math.max(W,H)), sw=Math.round(W*k), sh=Math.round(H*k);
+  const big={W,H,lab}, small=new Float32Array(sw*sh*3);
+  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const si=((y/k|0)*big.W+(x/k|0))*3,di=(y*sw+x)*3;small[di]=lab[si];small[di+1]=lab[si+1];small[di+2]=lab[si+2]}
+  W=sw;H=sh;lab=small;
+  let r=null; try{ r=autoSeedCore(); } finally { W=big.W;H=big.H;lab=big.lab; }
+  return r&&{x:Math.min(W-1,Math.round(r.x/k)),y:Math.min(H-1,Math.round(r.y/k))};
+}
+function autoSeedCore(){
+  const N=W*H, Q=12;
+  // 1) 사진의 주요 색 10가지 (거친 색 구간별 픽셀 수)
+  const hist=new Map();
+  for(let i=0;i<N;i+=2){const k=((lab[i*3]/Q)|0)*10000+(((lab[i*3+1]+128)/Q)|0)*100+(((lab[i*3+2]+128)/Q)|0);hist.set(k,(hist.get(k)||0)+1)}
+  const colors=[...hist.entries()].sort((x,y)=>y[1]-x[1]).slice(0,10).map(([k])=>({
+    L:((k/10000|0)+0.5)*Q, A:(((k/100|0)%100)+0.5)*Q-128, B:((k%100)+0.5)*Q-128}));
+  // 2) 색마다: 그 색 영역을 덩어리로 나누고, 크기가 비슷한 덩어리가 많이 반복되는지 봄
+  let best=null,bs=0;
+  colors.forEach(col=>{
+    let m=new Uint8Array(N);
+    for(let i=0;i<N;i++){const dl=(lab[i*3]-col.L)*0.5,da=lab[i*3+1]-col.A,db=lab[i*3+2]-col.B;if(dl*dl+da*da+db*db<16*16)m[i]=1}
+    m=erode(dilate(dilate(erode(m))));                 // 잡티 제거 + 글씨·반사 작은 구멍 메움
+    const {blobs}=label(m), cand=[];
+    blobs.forEach(px=>{
+      if(px.length<Math.max(6,N*0.0001)||px.length>N*0.06) return;
+      let edge=0,sx=0,sy=0; for(const p of px){sx+=p%W;sy+=(p/W)|0;if(!m[p-1]||!m[p+1]||!m[p-W]||!m[p+W])edge++}
+      const rough=edge*edge/(4*Math.PI*px.length);
+      if(rough>2.6) return;                            // 들쭉날쭉한 것(반사·그림자·종이 모서리) 제외
+      cand.push({px,n:px.length,cx:sx/px.length,cy:sy/px.length,rough});
+    });
+    cand.forEach(c=>{
+      let sc=0; for(const o of cand) if(o!==c&&o.n>c.n*0.75&&o.n<c.n*1.33) sc++;
+      sc+=1-c.rough*0.2;                               // 같은 점수면 더 매끈한(단독) 약
+      if(sc>bs){bs=sc;best=c}
+    });
+  });
+  if(!best||bs<2) return null;                         // 반복되는 물체가 없으면 직접 선택으로
+  // 3) 그 물체 안에서 중심에 가장 가까운 픽셀
+  let bp=best.px[0],bd=1e18; for(const p of best.px){const d=(p%W-best.cx)**2+(((p/W)|0)-best.cy)**2;if(d<bd){bd=d;bp=p}}
+  return {x:bp%W,y:(bp/W)|0};
 }
 
 function pca(px){
