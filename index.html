@@ -83,6 +83,40 @@
   .modal .box{background:var(--panel);border-radius:16px;max-width:700px;width:100%;max-height:92vh;overflow:auto;padding:14px}
   .modal img{width:100%;border-radius:10px;display:block}
   .modal h2{margin:4px 0 8px;font-size:22px}
+  /* 재고 */
+  .inv{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .inv li{background:var(--panel);border-radius:14px;padding:14px;cursor:pointer;border:2px solid transparent}
+  .inv li:active{border-color:var(--primary)}
+  .inv-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .inv .nm{font-size:18px;font-weight:800}
+  .inv .cnt{font-size:30px;font-weight:900;color:var(--ok);white-space:nowrap}
+  .inv .cnt small,.inv-total small{font-size:16px;color:var(--text);margin-left:2px}
+  .inv-rows{font-size:15px;color:var(--muted);margin-top:6px}
+  .inv-rows div{display:flex;justify-content:space-between}
+  .inv-rows b{color:var(--text)}
+  .inv .dt{font-size:13px;color:var(--muted);margin-top:6px}
+  .inv-bar{display:flex;gap:8px;margin:8px 0 10px}
+  .inv-bar button{flex:none;min-height:54px;font-size:17px}
+  .inv-head{display:flex;justify-content:space-between;align-items:center}
+  .inv-head .x{flex:none;background:none;color:var(--muted);font-size:24px;min-height:44px;padding:4px 10px}
+  .inv-total{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 6px;color:var(--muted);font-size:14px}
+  .inv-total b{font-size:40px;color:var(--ok);font-weight:900}
+  .inv-line{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+  .inv-line .lbl{flex:1;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inv-line .unit{width:34px;color:var(--muted);font-size:15px}
+  .stepper{display:flex;align-items:center;background:#0b1222;border:2px solid var(--line);border-radius:12px}
+  .stepper button{flex:none;background:none;color:var(--text);font-size:24px;min-height:48px;width:48px;padding:0}
+  .stepper span{min-width:48px;text-align:center;font-size:20px;font-weight:800;cursor:pointer}
+  .mini{flex:none;min-height:44px;width:44px;padding:0;font-size:16px;background:var(--panel);color:var(--muted);border:2px solid var(--line)}
+  .mini.cam{background:var(--ok);color:#052e16;border-color:var(--ok);font-size:20px}
+  .mini.ghost{display:inline-block;visibility:hidden}
+  .inv-addpack{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .inv-addpack .sm{flex:1;min-width:90px;font-size:16px;padding:10px}
+  .inv-addpack button{flex:none;min-height:48px;font-size:15px;padding:8px 12px}
+  .inv-h3{font-size:16px;color:var(--muted);margin:16px 0 6px}
+  .inv-hist{width:100%;border-collapse:collapse;font-size:15px}
+  .inv-hist td{padding:6px 4px;border-bottom:1px solid var(--line)}
+  .inv-hist td:last-child{text-align:right;font-weight:700}
   /* 사용법 */
   .help h2{font-size:21px;margin:0 0 8px;color:var(--primary)}
   .help ol,.help ul{margin:0;padding-left:22px;font-size:17px;line-height:1.7}
@@ -137,6 +171,17 @@
     <ul class="hist" id="histList"></ul>
   </section>
 
+  <!-- ===== 재고 화면 ===== -->
+  <section class="page hidden" id="pgInv">
+    <div class="inv-bar">
+      <input class="text" id="invQ" placeholder="🔍 약품명 검색">
+      <button class="secondary" id="invExport" title="엑셀(CSV)로 내보내기">⬇ 엑셀</button>
+    </div>
+    <button class="primary" id="invAdd" style="flex:none;margin-bottom:10px">＋ 약품 등록</button>
+    <div class="hist-sum" id="invSum"></div>
+    <ul class="inv" id="invList"></ul>
+  </section>
+
   <!-- ===== 사용법 화면 ===== -->
   <section class="page hidden help" id="pgHelp">
     <div class="card">
@@ -189,6 +234,18 @@
       </ul>
     </div>
     <div class="card">
+      <h2>📦 재고 관리 (병·낱알 단위)</h2>
+      <ol>
+        <li><b>재고</b> 탭 → <b>＋ 약품 등록</b> → 약품명을 입력합니다.</li>
+        <li>포장 단위를 맞춥니다. 기본은 <b>100정/1병</b>이며, 아래 칸에 정 수와 단위(병·PTP·통)를 넣고 <b>＋ 포장 단위</b>로 추가합니다.</li>
+        <li><b>−/＋</b>로 병 수·낱알·반알을 입력합니다. 숫자를 누르면 직접 입력할 수 있습니다.</li>
+        <li>낱알이 많으면 <b>📷</b> 버튼 → 촬영 → 기준 약 터치 → <b>📦 낱알로 반영</b>을 누르면 자동으로 채워집니다.</li>
+        <li><b>✅ 등록</b>을 누르면 조사일과 함께 저장되고, 목록에 <b>총 정 수</b>와 내역이 표시됩니다.</li>
+        <li>약품을 다시 누르면 지난 수량이 채워진 상태로 열리고, <b>이전 조사</b> 기록도 볼 수 있습니다.</li>
+        <li><b>⬇ 엑셀</b>: 모든 조사 기록을 CSV 파일로 내려받아 엑셀에서 열거나 팀원에게 공유합니다.</li>
+      </ol>
+    </div>
+    <div class="card">
       <h2>기록 · 홈 화면 추가</h2>
       <ul>
         <li><b>기록</b> 탭: 저장한 결과를 최신순으로 보고, 약 이름으로 검색합니다. 항목을 누르면 사진 확대·이미지 저장·삭제가 됩니다.</li>
@@ -203,6 +260,7 @@
 <nav class="tabs">
   <button class="on" data-pg="pgCount"><i>📷</i>계수</button>
   <button data-pg="pgHistory"><i>📋</i>기록</button>
+  <button data-pg="pgInv"><i>📦</i>재고</button>
   <button data-pg="pgHelp"><i>❓</i>사용법</button>
 </nav>
 <div class="toast" id="toast"></div>
@@ -270,8 +328,9 @@ function stepResult(){
   actions.innerHTML='';
   btn('↺ 다시 촬영','secondary',stepCapture);
   btn('🎯 기준 다시 선택','secondary',stepPick);
-  btn('✅ 기록 저장','primary',saveRecord);
-  $('nameRow').style.display='block';
+  if(invPending) btn(`📦 ${invPending.name} 낱알로 반영`,'primary',applyCountToInv);
+  else btn('✅ 기록 저장','primary',saveRecord);
+  $('nameRow').style.display=invPending?'none':'block';
 }
 
 /* ---------- 터치 처리 ---------- */
@@ -585,12 +644,150 @@ function downloadRecord(r){
 /* ---------- 탭 이동 ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x===b));
-  ['pgCount','pgHistory','pgHelp'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.pg));
+  ['pgCount','pgHistory','pgInv','pgHelp'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.pg));
   if(b.dataset.pg==='pgCount'){ if(!result&&view.classList.contains('hidden')) stepCapture(); }
   else stopCam();
   if(b.dataset.pg==='pgHistory') renderHistory();
+  if(b.dataset.pg==='pgInv') renderInv();
   window.scrollTo(0,0);
 });
+
+const goTab=pg=>document.querySelector(`nav.tabs button[data-pg=${pg}]`).click();
+/* ---------- 재고 관리 (병·PTP 등 포장 단위 + 낱알 + 반알) ---------- */
+const INV_KEY='pillcounter.inventory';
+const loadInv=()=>{try{return JSON.parse(localStorage.getItem(INV_KEY))||[]}catch(e){return[]}};
+const storeInv=d=>localStorage.setItem(INV_KEY,JSON.stringify(d));
+const fmtN=n=>(Math.round(n*10)/10).toLocaleString();
+const fmtD=iso=>fmt(iso).slice(0,13);
+let draft=null;          // 지금 등록 창에서 편집 중인 재고
+let invPending=null;     // 카메라 계수 결과를 받을 약품 id
+
+const totalOf=c=>c.packs.reduce((s,p)=>s+p.size*p.n,0)+c.loose+c.halves*0.5;
+
+function renderInv(){
+  const drugs=loadInv(), q=$('invQ').value.trim().toLowerCase();
+  const list=drugs.filter(d=>!q||d.name.toLowerCase().includes(q)).sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
+  $('invSum').textContent=drugs.length?`약품 ${list.length}종`:'';
+  $('invList').innerHTML=list.length?list.map(d=>{
+    const c=d.checks[0];
+    const rows=c?[...c.packs.filter(p=>p.n).map(p=>`<div>${p.size}정/${esc(p.label)} × ${p.n}<b>${fmtN(p.size*p.n)}</b></div>`),
+      c.loose?`<div>낱알<b>${c.loose}</b></div>`:'', c.halves?`<div>반알 ${c.halves}<b>${fmtN(c.halves/2)}</b></div>`:''].join(''):'<div>아직 조사 기록 없음</div>';
+    return `<li data-id="${d.id}">
+      <div class="inv-top"><div class="nm">${esc(d.name)}</div><div class="cnt">${c?fmtN(c.total):'-'}<small>정</small></div></div>
+      <div class="inv-rows">${rows}</div>
+      <div class="dt">${c?'조사일 '+fmtD(c.date):''}</div>
+    </li>`}).join(''):`<div class="empty">${drugs.length?'검색 결과가 없습니다':'등록된 약품이 없습니다.<br><b>＋ 약품 등록</b>을 눌러 시작하세요.'}</div>`;
+}
+$('invQ').oninput=renderInv;
+$('invList').onclick=e=>{const li=e.target.closest('li');if(li)openInv(li.dataset.id)};
+$('invAdd').onclick=()=>openInv(null);
+$('invExport').onclick=exportInv;
+
+function openInv(id,keepDraft){
+  if(!keepDraft){
+    const d=id?loadInv().find(x=>x.id===id):null;
+    const last=d&&d.checks[0];
+    draft={id:d?d.id:'d'+Date.now(),isNew:!d,name:d?d.name:'',
+      packs:(d?d.packs:[{size:100,label:'병'}]).map(p=>({...p,n:last?(last.packs.find(q=>q.size===p.size&&q.label===p.label)||{n:0}).n:0})),
+      loose:last?last.loose:0,halves:last?last.halves:0,history:d?d.checks:[]};
+  }
+  renderInvModal();
+  $('modal').style.display='flex';
+}
+
+function renderInvModal(){
+  const t=totalOf(draft);
+  const step=(key,i)=>`<div class="stepper"><button data-k="${key}" data-i="${i}" data-d="-1">−</button><span>${key==='pack'?draft.packs[i].n:draft[key]}</span><button data-k="${key}" data-i="${i}" data-d="1">＋</button></div>`;
+  const hist=draft.history.slice(0,10).map(c=>`<tr><td>${fmtD(c.date)}</td><td>${fmtN(c.total)}정</td></tr>`).join('');
+  $('modalBox').innerHTML=`
+    <div class="inv-head"><h2>${draft.isNew?'약품 등록':'재고 조사'}</h2><button class="x" id="iClose">✕</button></div>
+    <input class="text" id="iName" placeholder="약품명 (예: 알닥톤필름코팅정 25mg)" value="${esc(draft.name)}" ${draft.isNew?'':'readonly'}>
+    <div class="inv-total"><span>${new Date().toLocaleDateString('ko-KR')} 기준</span><b>${fmtN(t)}<small>정</small></b></div>
+    ${draft.packs.map((p,i)=>`
+      <div class="inv-line">
+        <div class="lbl">${p.size}정/${esc(p.label)}</div>${step('pack',i)}<div class="unit">${esc(p.label)}</div>
+        <button class="mini" data-del="${i}" title="포장 단위 삭제">✕</button>
+      </div>`).join('')}
+    <div class="inv-line">
+      <div class="lbl">낱알</div>${step('loose',0)}<div class="unit">정</div>
+      <button class="mini cam" id="iCam" title="카메라로 세기">📷</button>
+    </div>
+    <div class="inv-line">
+      <div class="lbl">반알</div>${step('halves',0)}<div class="unit">개</div><span class="mini ghost"></span>
+    </div>
+    <div class="inv-addpack">
+      <input class="text sm" id="pSize" type="number" inputmode="numeric" placeholder="정 수">
+      <input class="text sm" id="pLabel" placeholder="단위" list="packLabels">
+      <datalist id="packLabels"><option value="병"><option value="PTP"><option value="통"><option value="박스"></datalist>
+      <button class="secondary" id="pAdd">＋ 포장 단위</button>
+    </div>
+    <div class="actions">
+      ${draft.isNew?'':'<button class="secondary" id="iDel">🗑 약품 삭제</button>'}
+      <button class="primary" id="iSave">✅ 등록</button>
+    </div>
+    ${hist?`<h3 class="inv-h3">이전 조사</h3><table class="inv-hist">${hist}</table>`:''}`;
+  $('iName').oninput=e=>draft.name=e.target.value;
+  $('modalBox').querySelectorAll('.stepper button').forEach(b=>b.onclick=()=>{
+    const d=+b.dataset.d;
+    if(b.dataset.k==='pack'){const p=draft.packs[+b.dataset.i];p.n=Math.max(0,p.n+d)}else draft[b.dataset.k]=Math.max(0,draft[b.dataset.k]+d);
+    renderInvModal();
+  });
+  // 숫자를 눌러 직접 입력
+  $('modalBox').querySelectorAll('.stepper span').forEach(sp=>sp.onclick=()=>{
+    const b=sp.previousElementSibling, k=b.dataset.k, i=+b.dataset.i;
+    const cur=k==='pack'?draft.packs[i].n:draft[k];
+    const v=prompt('수량을 입력하세요',cur); if(v===null||v===''||isNaN(+v))return;
+    if(k==='pack')draft.packs[i].n=Math.max(0,Math.round(+v)); else draft[k]=Math.max(0,Math.round(+v));
+    renderInvModal();
+  });
+  $('modalBox').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{draft.packs.splice(+b.dataset.del,1);renderInvModal()});
+  $('pAdd').onclick=()=>{
+    const size=Math.round(+$('pSize').value), label=$('pLabel').value.trim()||'병';
+    if(!(size>0)){toast('포장 1개당 정 수를 입력하세요');return}
+    draft.packs.push({size,label,n:0});renderInvModal();
+  };
+  $('iCam').onclick=()=>{
+    if(!draft.name.trim()){toast('약품명을 먼저 입력하세요');return}
+    invPending=draft; closeModal(); goTab('pgCount'); stepCapture();
+    toast('낱알을 촬영해 세어 주세요');
+  };
+  $('iClose').onclick=()=>{draft=null;closeModal()};
+  if($('iDel'))$('iDel').onclick=()=>{
+    if(!confirm(`'${draft.name}' 약품과 조사 기록을 모두 삭제할까요?`))return;
+    storeInv(loadInv().filter(d=>d.id!==draft.id));draft=null;closeModal();renderInv();toast('삭제했습니다');
+  };
+  $('iSave').onclick=saveInv;
+}
+
+function saveInv(){
+  const name=draft.name.trim(); if(!name){toast('약품명을 입력하세요');return}
+  const drugs=loadInv();
+  if(draft.isNew&&drugs.some(d=>d.name===name)){toast('이미 등록된 약품명입니다');return}
+  let d=drugs.find(x=>x.id===draft.id);
+  if(!d){d={id:draft.id,name,packs:[],checks:[]};drugs.push(d)}
+  d.packs=draft.packs.map(({size,label})=>({size,label}));
+  const c={date:new Date().toISOString(),packs:draft.packs.map(({size,label,n})=>({size,label,n})),loose:draft.loose,halves:draft.halves};
+  c.total=totalOf(c); d.checks.unshift(c); d.updated=c.date;
+  storeInv(drugs); draft=null; closeModal(); renderInv();
+  toast(`✅ ${name} ${fmtN(c.total)}정 등록`);
+}
+
+// 계수 결과 → 재고 등록 창의 낱알·반알로
+function applyCountToInv(){
+  const d=invPending; invPending=null;
+  d.loose=result.whole; d.halves=result.halves||0;
+  draft=d; goTab('pgInv'); openInv(d.id,true);
+  toast(`낱알 ${result.whole}정${d.halves?` · 반알 ${d.halves}개`:''} 반영`);
+}
+
+function exportInv(){
+  const drugs=loadInv(); if(!drugs.length){toast('내보낼 재고가 없습니다');return}
+  const rows=[['약품명','조사일시','포장 내역','낱알','반알','총 정 수']];
+  drugs.forEach(d=>d.checks.forEach(c=>rows.push([d.name,fmt(c.date),c.packs.filter(p=>p.n).map(p=>`${p.size}정/${p.label}×${p.n}`).join(' + '),c.loose,c.halves,c.total])));
+  const csv='﻿'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`필카운터_재고_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
 
 renderHistory();
 stepCapture();
