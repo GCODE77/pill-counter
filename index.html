@@ -267,11 +267,17 @@
   .toast{background:rgba(20,22,30,.92);color:var(--g1);border:1px solid rgba(226,196,126,.4);backdrop-filter:blur(12px);font-weight:600}
   .warn{background:rgba(244,63,94,.08);border-color:rgba(244,63,94,.45)}
   .modal{background:rgba(3,4,8,.7);backdrop-filter:blur(6px)}
+  .focus-ring{position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border:1.5px solid var(--g1);border-radius:16px;pointer-events:none;opacity:0;z-index:5;
+    box-shadow:0 0 0 1px rgba(0,0,0,.35),0 0 18px rgba(226,196,126,.35)}
+  .focus-ring:after{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:var(--g1)}
+  .focus-ring.on{animation:focusPulse 1.1s ease-out forwards}
+  @keyframes focusPulse{0%{opacity:0;transform:scale(1.5)}18%{opacity:1;transform:scale(1)}30%{transform:scale(1.06)}42%{transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+  .stage video{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 </style>
 </head>
 <body>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.0</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.1</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -289,6 +295,7 @@
     <video id="video" playsinline muted autoplay class="hidden"></video>
     <canvas id="view" class="view hidden"></canvas>
     <canvas id="ovl" class="ovl hidden"></canvas>
+    <div class="focus-ring" id="focusRing"></div>
     <div class="busy" id="busy">세는 중…</div>
   </div>
 
@@ -360,7 +367,8 @@
       <ol>
         <li>촬영하면 <b>터치 없이 자동으로</b> 셉니다. 사진에서 같은 모양·색으로 가장 많이 반복되는 물체를 약으로 판단합니다.</li>
         <li>여러 종류의 약이 섞여 있거나 다른 약을 세고 싶으면, 결과 화면의 <b>🎯 직접 선택</b>을 누르고 그 약 한 알을 터치하세요.</li>
-        <li>실시간 화면에서도 자동으로 세며, 원하는 약을 터치하면 그 약으로 고정됩니다.</li>
+        <li>실시간 화면에서도 자동으로 셉니다. 여러 약이 섞여 있으면 원하는 약을 <b>길게 누르면</b> 그 약만 셉니다.</li>
+        <li>화면을 <b>짧게 터치</b>하면 그 위치에 <b>초점</b>을 맞춥니다(기기에 따라 자동 초점만 지원될 수 있음).</li>
       </ol>
     </div>
     <div class="card">
@@ -418,7 +426,7 @@
     <div class="card">
       <h2>화면이 예전 그대로일 때</h2>
       <ul>
-        <li>맨 위 제목 옆 버전이 <b>v4.0</b>이 아니면 예전 화면이 저장된 것입니다.</li>
+        <li>맨 위 제목 옆 버전이 <b>v4.1</b>이 아니면 예전 화면이 저장된 것입니다.</li>
         <li>브라우저에서 <b>새로고침</b>하거나, 홈 화면 앱이면 <b>앱을 완전히 닫았다가</b> 다시 여세요. 업데이트 후 최대 10분 정도 걸릴 수 있습니다.</li>
       </ul>
     </div>
@@ -470,7 +478,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=4.0');
+  engine=new Worker('engine.js?v=4.1');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -514,6 +522,7 @@ async function stepCapture(){
     if(!stream){
       stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
       video.srcObject=stream;
+      setFocusMode('continuous');                    // 기본: 계속 자동 초점
     }
     if(my!==capSeq){ if(stream&&!live){stream.getTracks().forEach(t=>t.stop());stream=null} return; } // 그 사이 사진을 불러왔으면 카메라를 끄고 끝냄
     await video.play().catch(()=>{});
@@ -539,7 +548,7 @@ function toggleLive(){
 }
 function showPlainCamera(){
   view.classList.add('hidden'); video.classList.remove('hidden'); badge.style.display='none';
-  guide.innerHTML='약을 펼쳐 놓고 촬영하세요<small>화면을 눌러도 촬영됩니다 · 찍으면 자동으로 셉니다</small>';
+  guide.innerHTML='약을 펼쳐 놓고 촬영하세요<small>화면을 터치하면 초점을 맞춥니다 · 찍으면 자동으로 셉니다</small>';
 }
 function stopCam(){ stopLive(); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden') }
 
@@ -553,7 +562,7 @@ function startLive(){
   live={busy:false,auto:true,seed:null,raf:0,last:null};
   video.classList.remove('hidden'); view.classList.add('hidden'); ovl.classList.remove('hidden');
   octx.clearRect(0,0,ovl.width,ovl.height);
-  guide.innerHTML='비추기만 하면 자동으로 셉니다<small>숫자가 멈추면 <b>촬영</b> · 다른 약을 세려면 그 약을 터치</small>';
+  guide.innerHTML='비추기만 하면 자동으로 셉니다<small>터치하면 초점 · 숫자가 멈추면 <b>촬영</b> · 특정 약만 세려면 길게 누르기</small>';
   badge.style.display='block'; badge.innerHTML='<span class="wait">약이 보이지 않습니다 · 약을 비춰 주세요</span>';
   liveLoop();
 }
@@ -659,13 +668,54 @@ function stepResult(){
 }
 
 /* ---------- 터치 처리 ---------- */
-video.addEventListener('click',e=>{
-  if(!live) return capture();
-  if(!live.fw) return;
-  const r=video.getBoundingClientRect();
-  live.seed={x:Math.round((e.clientX-r.left)*live.fw/r.width),y:Math.round((e.clientY-r.top)*live.fh/r.height)};
-  live.auto=false; toast('터치한 약으로 셉니다');
+/* ---------- 터치 초점 ----------
+   짧게 터치 → 그 위치에 초점·밝기 맞춤 / 길게 누름(실시간) → 그 약만 세기 */
+const camTrack=()=>stream&&stream.getVideoTracks()[0];
+function setFocusMode(mode){
+  const t=camTrack(); if(!t||!t.getCapabilities) return false;
+  const c=t.getCapabilities(); if(!c.focusMode||!c.focusMode.includes(mode)) return false;
+  t.applyConstraints({advanced:[{focusMode:mode}]}).catch(()=>{}); return true;
+}
+let focusTimer=0;
+async function focusAt(nx,ny){
+  const t=camTrack(); if(!t||!t.getCapabilities) return false;
+  const c=t.getCapabilities(), adv={};
+  if(c.pointsOfInterest!==undefined||'pointsOfInterest' in (t.getSettings?t.getSettings():{})) adv.pointsOfInterest=[{x:nx,y:ny}];
+  if(c.focusMode&&c.focusMode.includes('single-shot')) adv.focusMode='single-shot';
+  else if(c.focusMode&&c.focusMode.includes('continuous')) adv.focusMode='continuous';
+  if(c.exposureMode&&c.exposureMode.includes('continuous')) adv.exposureMode='continuous';
+  if(!Object.keys(adv).length) return false;
+  try{ await t.applyConstraints({advanced:[adv]}); }catch(e){ return false; }
+  clearTimeout(focusTimer);                              // 잠시 뒤 다시 '계속 자동 초점'으로
+  focusTimer=setTimeout(()=>setFocusMode('continuous'),2500);
+  return true;
+}
+function showFocusRing(cx,cy){
+  const st=$('stage').getBoundingClientRect(), f=$('focusRing');
+  f.style.left=(cx-st.left)+'px'; f.style.top=(cy-st.top)+'px';
+  f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
+}
+let pressT=0, pressXY=null;
+video.addEventListener('pointerdown',e=>{
+  pressXY={x:e.clientX,y:e.clientY};
+  clearTimeout(pressT);
+  pressT=setTimeout(()=>{                                // 길게 누름: 실시간에서 그 약으로 고정
+    pressT=0; if(!live||!live.fw) return;
+    const r=video.getBoundingClientRect();
+    live.seed={x:Math.round((pressXY.x-r.left)*live.fw/r.width),y:Math.round((pressXY.y-r.top)*live.fh/r.height)};
+    live.auto=false; showFocusRing(pressXY.x,pressXY.y); toast('누른 약과 같은 약만 셉니다');
+  },550);
 });
+video.addEventListener('pointerup',async e=>{
+  if(!pressT) return;                                    // 길게 누른 경우는 이미 처리됨
+  clearTimeout(pressT); pressT=0;
+  const r=video.getBoundingClientRect();
+  showFocusRing(e.clientX,e.clientY);
+  const ok=await focusAt((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
+  if(!ok&&!focusAt.warned){ focusAt.warned=1; toast('이 기기는 자동 초점만 지원합니다'); }
+});
+video.addEventListener('pointercancel',()=>{clearTimeout(pressT);pressT=0});
+video.addEventListener('contextmenu',e=>e.preventDefault());
 view.addEventListener('click',e=>{
   const r=view.getBoundingClientRect();
   const x=Math.round((e.clientX-r.left)*W/r.width), y=Math.round((e.clientY-r.top)*H/r.height);
