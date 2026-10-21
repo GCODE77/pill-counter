@@ -1,5 +1,5 @@
 {
-  "version": "4.3",
-  "notes": "시작 화면, 저작권 표기, 결과 숫자 연출, 빈 화면 안내 개선",
+  "version": "4.4",
+  "notes": "결과 되돌리기·처음으로, 골드 표시, 세련된 화면 마감",
   "files": ["index.html", "engine.js", "manifest.webmanifest"]
 }

@@ -319,6 +319,53 @@
   .empty-state em{font-style:normal;color:var(--gold)}
   .empty-state button{flex:none;margin-top:8px;padding:10px 18px}
   .count-badge .num{font-weight:700;font-variant-numeric:tabular-nums}
+  /* v4.4 — 세련된 마감 */
+  ::selection{background:rgba(226,196,126,.35)}
+  section.page{animation:pageIn .28s ease both}
+  @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .busy{gap:10px;font-size:14px;letter-spacing:.18em}
+  .busy .spin{width:18px;height:18px;border-radius:50%;border:1.5px solid rgba(226,196,126,.25);border-top-color:var(--g1);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .edit-tools{position:absolute;left:10px;top:10px;z-index:6;display:flex;gap:6px;opacity:0;transform:translateY(-6px);pointer-events:none;transition:.2s}
+  .edit-tools.show{opacity:1;transform:none;pointer-events:auto}
+  .edit-tools button{flex:none;min-height:34px;padding:6px 11px;border-radius:999px;font-size:13px;font-weight:600;
+    background:rgba(10,12,18,.62);color:#efe9db;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(10px)}
+  .edit-tools .ic{width:15px;height:15px}
+  .tune{padding:12px 14px}
+  .stat{margin-top:0}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;font-size:13px}
+  details.adv{margin-top:10px;border-top:1px solid var(--hair);padding-top:8px}
+  details.adv summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px;font-weight:600;letter-spacing:.02em}
+  details.adv summary::-webkit-details-marker{display:none}
+  details.adv summary:after{content:"";width:7px;height:7px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);margin-left:8px;transition:.2s}
+  details.adv[open] summary:after{transform:rotate(-135deg)}
+  details.adv summary span{margin-left:auto;color:var(--gold);font-weight:600}
+  details.adv label{display:block;margin-top:10px;font-size:13px;color:var(--text)}
+  .hist li,.inv li{transition:background .15s}
+  .hist li:active,.inv li:active{background:rgba(226,196,126,.06)}
+  .hist img{border-radius:12px;box-shadow:0 0 0 1px var(--hair2)}
+  .hist .nm,.inv .nm{font-weight:600}
+  .hist .dt,.inv .dt{letter-spacing:.01em}
+  .help .card{padding:16px 18px}
+  .help h2{font-size:17px;letter-spacing:-.01em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .help h2:before{content:"";width:4px;height:14px;border-radius:2px;background:linear-gradient(var(--g1),var(--g3))}
+  .help ol,.help ul{font-size:15px;line-height:1.75;color:#ddd8cc}
+  .help li::marker{color:var(--gold)}
+  .help td{border-bottom:1px solid var(--hair);font-size:14px}
+  .modal .box{border-radius:22px;padding:18px;box-shadow:0 30px 70px rgba(0,0,0,.6)}
+  .inv-head h2{font-size:19px;font-weight:700;letter-spacing:-.02em}
+  .inv-head .x .ic{width:20px;height:20px}
+  .inv-line{border-top:1px solid var(--hair)}
+  .stepper{border:1px solid var(--hair2);background:rgba(0,0,0,.3);border-radius:12px}
+  .stepper button{color:var(--gold)}
+  .mini{background:var(--glass);border:1px solid var(--hair2);color:var(--muted)}
+  .mini .ic{width:16px;height:16px}
+  .mini.cam{background:linear-gradient(145deg,var(--g1),var(--g2) 55%,var(--g3));color:#1b1405;border-color:transparent}
+  .scan .frame{border:1.5px solid var(--g2);border-radius:20px;box-shadow:0 0 0 2000px rgba(0,0,0,.55),0 0 24px rgba(226,196,126,.3)}
+  .scan .msg{font-size:16px;font-weight:600}
+  .scan .bar{background:rgba(10,12,18,.92);border-top:1px solid var(--hair)}
+  #pgCount{padding-bottom:64px}
+  #pgCount .actions{background:linear-gradient(180deg,rgba(6,7,11,0),rgba(6,7,11,.97) 18%)!important;padding-top:12px}
 </style>
 </head>
 <body data-pg="pgCount">
@@ -332,7 +379,7 @@
   </div>
 </div>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.3</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.4</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -354,15 +401,22 @@
     <button class="flash-btn hidden" id="flashBtn" aria-label="플래시" aria-pressed="false">
       <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg><span>플래시</span>
     </button>
-    <div class="busy" id="busy">세는 중…</div>
+    <div class="busy" id="busy"><span class="spin"></span>세는 중</div>
+    <div class="edit-tools" id="editTools">
+      <button id="undoBtn" aria-label="되돌리기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>되돌리기</span></button>
+      <button id="resetBtn" aria-label="처음 결과로"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg><span>처음으로</span></button>
+    </div>
   </div>
 
   <div class="tune" id="tune">
-    <label><span>색 허용 범위 (자동 보정)</span><span id="tolVal"></span></label>
-    <input type="range" id="tol" min="10" max="30" value="20">
-    <div class="hint">개수가 적게 나오면 → 오른쪽 / 배경까지 잡히면 → 왼쪽</div>
     <div class="stat" id="stat"></div>
     <div class="warn" id="warn"></div>
+    <details class="adv">
+      <summary>세부 조정<span id="tolVal"></span></summary>
+      <label><span>색 허용 범위</span></label>
+      <input type="range" id="tol" min="10" max="30" value="20">
+      <div class="hint">개수가 적게 나오면 오른쪽으로, 배경까지 잡히면 왼쪽으로</div>
+    </details>
   </div>
 
   <div class="name-row" id="nameRow">
@@ -380,7 +434,7 @@
 
   <!-- ===== 기록 화면 ===== -->
   <section class="page hidden" id="pgHistory">
-    <div class="hist-head"><input class="text" id="q" placeholder="🔍 약 이름으로 검색"></div>
+    <div class="hist-head"><input class="text" id="q" placeholder="약 이름으로 검색"></div>
     <div class="hist-sum" id="histSum"></div>
     <ul class="hist" id="histList"></ul>
   </section>
@@ -388,7 +442,7 @@
   <!-- ===== 재고 화면 ===== -->
   <section class="page hidden" id="pgInv">
     <div class="inv-bar">
-      <input class="text" id="invQ" placeholder="🔍 약품명 검색">
+      <input class="text" id="invQ" placeholder="약품명 검색">
       <button class="secondary" id="invScan" title="바코드로 약품 찾기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12"/></svg>바코드</button>
       <button class="secondary" id="invExport" title="엑셀(CSV)로 내보내기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg>엑셀</button>
     </div>
@@ -408,15 +462,15 @@
       <ol>
         <li>약을 <b>단색 배경</b> 위에 최대한 겹치지 않게 펼칩니다.</li>
         <li>휴대폰을 약 <b>바로 위에서 수평</b>으로 들고, 약이 화면에 가득 차게 맞춥니다.</li>
-        <li><b>📷 촬영</b>을 누르거나 화면을 누릅니다. 이미 찍은 사진은 <b>🖼 불러오기</b>로 가져옵니다.</li>
+        <li><b>촬영</b>을 누릅니다. 이미 찍은 사진은 <b>불러오기</b>로 가져옵니다.</li>
       </ol>
     </div>
     <div class="card">
-      <h2>⚡ 실시간 계수</h2>
+      <h2>실시간 계수</h2>
       <ol>
-        <li>카메라를 켜면 <b>처음부터 실시간</b>으로 시작합니다. 끄고 싶으면 <b>⚡ 실시간 켜짐</b> 버튼을 눌러 끕니다(설정은 기억됩니다).</li>
+        <li>카메라를 켜면 <b>처음부터 실시간</b>으로 시작합니다. 끄고 싶으면 <b>실시간 ON</b> 버튼을 눌러 끕니다(설정은 기억됩니다).</li>
         <li>카메라 화면에서 약 <b>한 알</b>을 터치하면, 비추는 동안 개수가 계속 바뀌며 표시됩니다.</li>
-        <li>숫자가 안정되면 <b>📷 촬영</b>을 누르세요. 고화질 사진으로 다시 정밀하게 세어 결과 화면으로 넘어갑니다.</li>
+        <li>숫자가 안정되면 <b>촬영</b>을 누르세요. 고화질 사진으로 다시 정밀하게 세어 결과 화면으로 넘어갑니다.</li>
         <li>실시간 숫자는 빠른 미리보기용입니다. 최종 수량은 <b>확정 후 결과</b>를 기준으로 하세요.</li>
       </ol>
     </div>
@@ -424,7 +478,7 @@
       <h2>② 자동 계수</h2>
       <ol>
         <li>촬영하면 <b>터치 없이 자동으로</b> 셉니다. 사진에서 같은 모양·색으로 가장 많이 반복되는 물체를 약으로 판단합니다.</li>
-        <li>여러 종류의 약이 섞여 있거나 다른 약을 세고 싶으면, 결과 화면의 <b>🎯 직접 선택</b>을 누르고 그 약 한 알을 터치하세요.</li>
+        <li>여러 종류의 약이 섞여 있거나 다른 약을 세고 싶으면, 결과 화면의 <b>직접 선택</b>을 누르고 그 약 한 알을 터치하세요.</li>
         <li>실시간 화면에서도 자동으로 셉니다. 여러 약이 섞여 있으면 원하는 약을 <b>길게 누르면</b> 그 약만 셉니다.</li>
         <li>화면을 <b>짧게 터치</b>하면 그 위치에 <b>초점</b>을 맞춥니다(기기에 따라 자동 초점만 지원될 수 있음).</li>
       </ol>
@@ -434,16 +488,16 @@
       <ol>
         <li>맨 위 <b>노란 숫자</b>가 총 개수입니다.</li>
         <li>표시가 <b>빠진 약</b>은 터치하면 추가(흰 표시), <b>잘못 잡힌 표시</b>는 터치하면 삭제됩니다.</li>
-        <li>약 이름을 적고(선택) <b>✅ 기록 저장</b>을 누르면 <b>기록</b> 탭에 남습니다.</li>
+        <li>약 이름을 적고(선택) <b>기록 저장</b>을 누르면 <b>기록</b> 탭에 남습니다.</li>
       </ol>
     </div>
     <div class="card">
       <h2>표시 색의 뜻</h2>
       <table>
-        <tr><td><i class="dot" style="background:#22c55e"></i>단독</td><td>떨어져 있는 약 1알</td></tr>
-        <tr><td><i class="dot" style="background:#e879f9"></i>붙음</td><td>맞닿은 약 — 한 알씩 나눠서 셈</td></tr>
-        <tr><td><i class="dot" style="background:#f43f5e"></i>겹침</td><td>다른 약에 가려진 약 — <b>추정값, 꼭 확인</b></td></tr>
-        <tr><td>✕ 회색</td><td>반알·부서진 조각 — <b>세지 않음</b></td></tr>
+        <tr><td><i class="dot" style="background:#e7cd8c"></i>단독</td><td>떨어져 있는 약 1알</td></tr>
+        <tr><td><i class="dot" style="background:#b9a4f5"></i>붙음</td><td>맞닿은 약 — 한 알씩 나눠서 셈</td></tr>
+        <tr><td><i class="dot" style="background:#f08da0"></i>겹침</td><td>다른 약에 가려진 약 — <b>추정값, 꼭 확인</b></td></tr>
+        <tr><td>회색 ×</td><td>반알·부서진 조각 — <b>세지 않음</b></td></tr>
         <tr><td>표시 없음</td><td>기준 약과 모양·크기·색이 다른 물건 — <b>세지 않음</b>. 빠졌다면 터치해서 추가</td></tr>
         <tr><td><i class="dot" style="background:#fff"></i>직접 추가</td><td>사용자가 터치로 추가한 약</td></tr>
       </table>
@@ -451,34 +505,34 @@
     <div class="card">
       <h2>개수가 안 맞을 때</h2>
       <ul>
-        <li><b>적게 나오면</b> → 색 허용 범위를 <b>오른쪽</b>으로</li>
-        <li><b>배경까지 잡히면</b> → 색 허용 범위를 <b>왼쪽</b>으로</li>
+        <li><b>적게 나오면</b> 결과 화면의 <b>세부 조정</b>에서 색 허용 범위를 <b>오른쪽</b>으로</li>
+        <li><b>배경까지 잡히면</b> 색 허용 범위를 <b>왼쪽</b>으로</li>
         <li>흰 약은 <b>어두운 배경</b>, 어두운 약은 <b>밝은 배경</b>에서 찍으세요.</li>
         <li>약과 색이 비슷한 물건(종이, 포장지)은 치워 주세요.</li>
         <li>약이 많이 겹치면 펼친 뒤 다시 찍는 것이 가장 정확합니다.</li>
       </ul>
     </div>
     <div class="card">
-      <h2>📦 재고 관리 (병·낱알 단위)</h2>
+      <h2>재고 관리 (병·낱알 단위)</h2>
       <ol>
-        <li><b>재고</b> 탭 → <b>＋ 약품 등록</b> → 약품명을 입력합니다.</li>
-        <li>포장 단위를 맞춥니다. 기본은 <b>100정/1병</b>이며, 아래 칸에 정 수와 단위(병·PTP·통)를 넣고 <b>＋ 포장 단위</b>로 추가합니다.</li>
-        <li><b>−/＋</b>로 병 수·낱알을 입력합니다. 숫자를 누르면 직접 입력할 수 있습니다.</li>
-        <li>낱알이 많으면 <b>📷</b> 버튼 → 촬영 → 기준 약 터치 → <b>📦 낱알로 반영</b>을 누르면 자동으로 채워집니다.</li>
-        <li><b>✅ 등록</b>을 누르면 조사일과 함께 저장되고, 목록에 <b>총 정 수</b>와 내역이 표시됩니다.</li>
+        <li><b>재고</b> 탭에서 <b>약품 등록</b>을 누르고 약품명을 입력합니다.</li>
+        <li>포장 단위를 맞춥니다. 기본은 <b>100정/1병</b>이며, 아래 칸에 정 수와 단위(병·PTP·통)를 넣고 <b>포장 단위</b>로 추가합니다.</li>
+        <li><b>− / +</b>로 병 수·낱알을 입력합니다. 숫자를 누르면 직접 입력할 수 있습니다.</li>
+        <li>낱알이 많으면 <b>카메라</b> 버튼으로 찍고 <b>낱알로 반영</b>을 누르면 자동으로 채워집니다.</li>
+        <li><b>등록</b>을 누르면 조사일과 함께 저장되고, 목록에 <b>총 정 수</b>와 내역이 표시됩니다.</li>
         <li>약품을 다시 누르면 지난 수량이 채워진 상태로 열리고, <b>이전 조사</b> 기록도 볼 수 있습니다.</li>
-        <li><b>⬇ 엑셀</b>: 모든 조사 기록을 CSV 파일로 내려받아 엑셀에서 열거나 팀원에게 공유합니다.</li>
+        <li><b>엑셀</b>: 모든 조사 기록을 CSV 파일로 내려받아 엑셀에서 열거나 팀원에게 공유합니다.</li>
       </ol>
     </div>
     <div class="card">
-      <h2>▦ 바코드로 약품 찾기</h2>
+      <h2>바코드로 약품 찾기</h2>
       <ol>
-        <li><b>재고</b> 탭 → <b>▦ 바코드</b> → 약통·포장의 바코드(일반 바코드 또는 네모난 2D 바코드)를 노란 칸에 맞춥니다.</li>
-        <li><b>처음 보는 바코드</b>면 등록 창이 열립니다. 약품명을 입력하고 <b>✅ 등록</b>하면 바코드가 그 약품에 연결됩니다.</li>
+        <li><b>재고</b> 탭의 <b>바코드</b>를 누르고, 약통·포장의 바코드(일반 또는 네모난 2D 바코드)를 골드 칸에 맞춥니다.</li>
+        <li><b>처음 보는 바코드</b>면 등록 창이 열립니다. 약품명을 입력하고 <b>등록</b>하면 바코드가 그 약품에 연결됩니다.</li>
         <li>다음부터는 바코드만 비추면 <b>약품명이 자동으로 찾아지고</b> 재고 조사 창이 바로 열립니다.</li>
         <li>2D 바코드에 들어 있는 <b>유통기한·제조번호</b>도 읽어서 함께 저장합니다. 유통기한이 90일 이내면 목록에 <b>(임박)</b>으로 표시됩니다.</li>
-        <li>계수 화면의 약 이름 칸 옆 <b>▦ 바코드</b>로도 약 이름을 채울 수 있습니다.</li>
-        <li>바코드가 잘 안 읽히면 <b>⌨ 숫자 직접 입력</b>으로 바코드 아래 숫자를 넣으세요.</li>
+        <li>계수 화면의 약 이름 칸 옆 <b>바코드</b>로도 약 이름을 채울 수 있습니다.</li>
+        <li>바코드가 잘 안 읽히면 <b>직접 입력</b>으로 바코드 아래 숫자를 넣으세요.</li>
       </ol>
     </div>
     <div class="card">
@@ -526,7 +580,7 @@
 <div class="update-bar" id="updateBar" role="status">
   <div class="u-txt"><b id="uTitle">새 버전이 있습니다</b><small id="uNote"></small></div>
   <button class="primary" id="uBtn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg><span>업데이트</span></button>
-  <button class="u-x" id="uLater" aria-label="나중에">✕</button>
+  <button class="u-x" id="uLater" aria-label="나중에"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   <div class="u-prog"><i id="uProg"></i></div>
 </div>
 <div class="scan" id="scan">
@@ -534,7 +588,7 @@
   <div class="frame"></div>
   <div class="msg" id="scanMsg"></div>
   <div class="bar">
-    <button class="secondary" id="scanManual">⌨ 직접 입력</button>
+    <button class="secondary" id="scanManual">직접 입력</button>
     <button class="primary" id="scanCancel">닫기</button>
   </div>
 </div>
@@ -549,16 +603,17 @@ const MAXSIDE=900;
 
 /* ---------- 화면 흐름 ---------- */
 function setStep(n){
+  if(n!==3) $('editTools').classList.remove('show');
   ['s1','s2','s3'].forEach((s,i)=>{$(s).className='step'+(i+1===n?' active':i+1<n?' done':'')});
 }
-const ICON={"cam": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z\"/><circle cx=\"12\" cy=\"12.5\" r=\"3.5\"/></svg>", "list": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M9 6h11M9 12h11M9 18h11\"/><circle cx=\"4.5\" cy=\"6\" r=\"1\"/><circle cx=\"4.5\" cy=\"12\" r=\"1\"/><circle cx=\"4.5\" cy=\"18\" r=\"1\"/></svg>", "box": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z\"/><path d=\"M3.5 7.5 12 12l8.5-4.5M12 12v9\"/></svg>", "help": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.4\"/><circle cx=\"12\" cy=\"17\" r=\".6\"/></svg>", "bolt": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M13 3 5 13.5h6L10 21l8-10.5h-6z\"/></svg>", "img": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"4.5\" width=\"17\" height=\"15\" rx=\"2.5\"/><circle cx=\"9\" cy=\"10\" r=\"1.6\"/><path d=\"m4 17 5-4.5 4 3.5 3-2.5 4 3.5\"/></svg>", "redo": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 12a8 8 0 1 0 2.4-5.7\"/><path d=\"M4 4v4.5h4.5\"/></svg>", "target": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"3.5\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3\"/></svg>", "check": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12.5 4.5 4.5L19 7.5\"/></svg>", "bar": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12\"/></svg>", "down": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14\"/></svg>", "plus": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg>", "pkg": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z\"/><path d=\"M8 5.2l8.5 4.6\"/></svg>"};
+const ICON={"cam": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z\"/><circle cx=\"12\" cy=\"12.5\" r=\"3.5\"/></svg>", "list": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M9 6h11M9 12h11M9 18h11\"/><circle cx=\"4.5\" cy=\"6\" r=\"1\"/><circle cx=\"4.5\" cy=\"12\" r=\"1\"/><circle cx=\"4.5\" cy=\"18\" r=\"1\"/></svg>", "box": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z\"/><path d=\"M3.5 7.5 12 12l8.5-4.5M12 12v9\"/></svg>", "help": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.4\"/><circle cx=\"12\" cy=\"17\" r=\".6\"/></svg>", "bolt": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M13 3 5 13.5h6L10 21l8-10.5h-6z\"/></svg>", "img": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"4.5\" width=\"17\" height=\"15\" rx=\"2.5\"/><circle cx=\"9\" cy=\"10\" r=\"1.6\"/><path d=\"m4 17 5-4.5 4 3.5 3-2.5 4 3.5\"/></svg>", "redo": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 12a8 8 0 1 0 2.4-5.7\"/><path d=\"M4 4v4.5h4.5\"/></svg>", "target": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"3.5\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3\"/></svg>", "check": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12.5 4.5 4.5L19 7.5\"/></svg>", "bar": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12\"/></svg>", "down": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14\"/></svg>", "plus": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg>", "pkg": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z\"/><path d=\"M8 5.2l8.5 4.6\"/></svg>", "trash": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5\"/></svg>", "close": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6 6 18\"/></svg>"};
 function btn(label,cls,fn,icon){const b=document.createElement('button');b.className=cls;b.innerHTML=(icon?ICON[icon]:'')+'<span>'+label+'</span>';b.onclick=fn;actions.appendChild(b);return b}
 
 /* ---------- 계수 엔진 (백그라운드 작업) ----------
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=4.3');
+  engine=new Worker('engine.js?v=4.4');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -581,7 +636,7 @@ function run(auto){
     if(tok!==runTok) return;                       // 더 새로운 요청이 있으면 버림
     $('busy').style.display='none';
     if(d.none){ stepPick(); toast(d.timeout?'너무 오래 걸려 멈췄습니다. 셀 약 한 알을 터치해 주세요':'같은 모양의 약을 찾지 못했습니다. 셀 약을 터치하거나 다시 찍어 주세요'); return; }
-    seed=d.seed; result={pts:d.pts,stat:d.stat,r:d.r,mask:d.mask};
+    seed=d.seed; result={pts:d.pts,stat:d.stat,r:d.r,mask:d.mask}; edits=[];
     draw(); stepResult();
   });
 }
@@ -698,11 +753,9 @@ function drawOverlay(d){
   d.pts.forEach(p=>{
     if(p.type==='제외') return; n++;
     const x=p.x*s,y=p.y*s;
-    octx.beginPath();octx.arc(x,y,r,0,7);octx.fillStyle=TYPE_COLOR[p.type];octx.fill();
-    octx.lineWidth=2*dpr;octx.strokeStyle='rgba(0,0,0,.85)';octx.stroke();
-    if(r>9*dpr){octx.fillStyle='#000';octx.font=`800 ${Math.round(r*(n>99?0.85:1.05))}px sans-serif`;octx.textAlign='center';octx.textBaseline='middle';octx.fillText(n,x,y+dpr)}
+    drawMarker(octx,x,y,r,TYPE_COLOR[p.type],r>9*dpr?n:null,dpr);
   });
-  if(live&&!live.auto&&live.seed){octx.lineWidth=3*dpr;octx.strokeStyle='#facc15';octx.beginPath();octx.arc(live.seed.x*s,live.seed.y*s,r*1.9,0,7);octx.stroke()}
+  if(live&&!live.auto&&live.seed){octx.lineWidth=1.5*dpr;octx.setLineDash([4*dpr,4*dpr]);octx.strokeStyle='#f8ecc4';octx.beginPath();octx.arc(live.seed.x*s,live.seed.y*s,r*1.9,0,7);octx.stroke();octx.setLineDash([])}
   badge.innerHTML=`<div class="lbl">${live&&live.auto?'LIVE · 자동 인식':'LIVE · 고른 약'}</div>${n}<span>개</span>`;
 }
 function stopLive(){
@@ -757,7 +810,7 @@ function stepPick(){
 }
 
 function stepResult(){
-  setStep(3); $('tune').style.display='block';
+  setStep(3); $('tune').style.display='block'; renderEditTools();
   guide.innerHTML='계수를 마쳤습니다<small>빠진 약은 터치해 추가 · 잘못된 표시는 터치해 삭제</small>';
   actions.innerHTML='';
   btn('다시 촬영','ghost',stepCapture,'redo');
@@ -766,6 +819,16 @@ function stepResult(){
   else btn('기록 저장','primary cta',saveRecord,'check');
   $('nameRow').style.display=invPending?'none':'block';
 }
+
+/* ---------- 결과 수정 기록: 되돌리기 / 처음으로 ---------- */
+let edits=[];
+function afterEdit(){ draw(); if(navigator.vibrate) navigator.vibrate(12); renderEditTools(); }
+function renderEditTools(){ $('editTools').classList.toggle('show',!!(result&&$('s3').classList.contains('active')&&edits.length)); }
+$('undoBtn').onclick=e=>{ e.stopPropagation(); const a=edits.pop(); if(!a) return;
+  if(a.t==='add') manual.pop(); else if(a.t==='unadd') manual.splice(a.i,0,a.p); else if(a.t==='off') result.pts[a.i].off=false;
+  draw(); renderEditTools(); };
+$('resetBtn').onclick=e=>{ e.stopPropagation(); if(!edits.length) return;
+  manual=[]; result.pts.forEach(p=>p.off=false); edits=[]; draw(); renderEditTools(); toast('처음 결과로 되돌렸습니다'); };
 
 /* ---------- 터치 처리 ---------- */
 /* ---------- 터치 초점 ----------
@@ -823,10 +886,10 @@ view.addEventListener('click',e=>{
   if(!result) return;
   const rad=Math.max(12,result.r*0.8);
   let mi=manual.findIndex(p=>Math.hypot(p.x-x,p.y-y)<rad);
-  if(mi>=0){manual.splice(mi,1);draw();return}
+  if(mi>=0){edits.push({t:'unadd',p:manual[mi],i:mi});manual.splice(mi,1);afterEdit();return}
   let ai=result.pts.findIndex(p=>!p.off&&p.type!=='제외'&&Math.hypot(p.x-x,p.y-y)<rad);
-  if(ai>=0){result.pts[ai].off=true;draw();return}
-  manual.push({x,y}); draw();
+  if(ai>=0){result.pts[ai].off=true;edits.push({t:'off',i:ai});afterEdit();return}
+  manual.push({x,y}); edits.push({t:'add'}); afterEdit();
 });
 tol.oninput=()=>{$('tolVal').textContent=tolLabel(); if(seed){manual=[];run(false)}};
 const tolLabel=()=>{const v=tol.value-20;return v==0?'자동':(v>0?'+':'')+v};
@@ -843,25 +906,22 @@ function draw(){
   ctx.putImageData(photo,0,0);
   // 인식 영역 살짝 강조
   const ov=ctx.getImageData(0,0,W,H), d=ov.data;
-  if(!live){ for(let i=0;i<W*H;i++) if(!result.mask[i]){d[i*4]*=0.45;d[i*4+1]*=0.45;d[i*4+2]*=0.45}
+  if(!live){ for(let i=0;i<W*H;i++) if(!result.mask[i]){d[i*4]*=0.38;d[i*4+1]*=0.38;d[i*4+2]*=0.40}
   ctx.putImageData(ov,0,0); }
   const r=Math.max(7,Math.min(20,result.r*0.45));
   let n=0, skipped=0;
   const skip=p=>{  // 세지 않은 반알·조각: 회색 X
     skipped++; const q=r*0.7;
-    ctx.lineWidth=5;ctx.strokeStyle='#000';ctx.beginPath();ctx.moveTo(p.x-q,p.y-q);ctx.lineTo(p.x+q,p.y+q);ctx.moveTo(p.x+q,p.y-q);ctx.lineTo(p.x-q,p.y+q);ctx.stroke();
-    ctx.lineWidth=2.5;ctx.strokeStyle='#cbd5e1';ctx.stroke();
+    ctx.lineCap='round';ctx.lineWidth=4;ctx.strokeStyle='rgba(0,0,0,.6)';ctx.beginPath();ctx.moveTo(p.x-q,p.y-q);ctx.lineTo(p.x+q,p.y+q);ctx.moveTo(p.x+q,p.y-q);ctx.lineTo(p.x-q,p.y+q);ctx.stroke();
+    ctx.lineWidth=1.8;ctx.strokeStyle='rgba(203,213,225,.85)';ctx.stroke();ctx.lineCap='butt';
   };
   const mark=(p,col)=>{
     if(p.type==='제외') return skip(p);
     n++;
-    ctx.beginPath();ctx.arc(p.x,p.y,r,0,7);ctx.fillStyle=col;ctx.fill();
-    ctx.lineWidth=2.5;ctx.strokeStyle='#000';ctx.stroke();
-    ctx.fillStyle='#000';ctx.font=`900 ${Math.round(r*(n>99?0.9:1.1))}px sans-serif`;
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(n,p.x,p.y+1);
+    drawMarker(ctx,p.x,p.y,r,col,n);
   };
   result.pts.filter(p=>!p.off).forEach(p=>mark(p,TYPE_COLOR[p.type]));
-  manual.forEach(p=>mark(p,'#ffffff'));
+  manual.forEach(p=>mark(p,TYPE_COLOR.직접));
   renderStat();
   result.total=n; result.whole=n;
   const prevShown=badge.dataset.n!==undefined&&badge.dataset.final==='1'?+badge.dataset.n:null;
@@ -871,7 +931,16 @@ function draw(){
   badge.style.display='block';
 }
 
-const TYPE_COLOR={단독:'#22c55e',붙음:'#e879f9',겹침:'#f43f5e',눕힘:'#38bdf8',세움:'#a78bfa',제외:'#64748b'};
+// 표시 색: 기본은 샴페인 골드, 맞닿은 약은 라벤더, 가려진 약은 로즈, 직접 추가는 흰색
+const TYPE_COLOR={단독:'#e7cd8c',붙음:'#b9a4f5',겹침:'#f08da0',눕힘:'#e7cd8c',세움:'#e7cd8c',제외:'#6b7280',직접:'#ffffff'};
+function drawMarker(g,x,y,r,col,n,dpr=1){
+  // 어두운 유리 원 + 얇은 색 테두리 + 색 숫자 → 사진을 가리지 않고 고급스럽게
+  g.beginPath();g.arc(x,y,r,0,7);g.fillStyle='rgba(8,9,14,.78)';g.fill();
+  g.lineWidth=Math.max(1.6,r*0.16)*1;g.strokeStyle=col;g.stroke();
+  g.beginPath();g.arc(x,y,r+g.lineWidth*0.9,0,7);g.lineWidth=1*dpr;g.strokeStyle='rgba(0,0,0,.55)';g.stroke();
+  if(n!=null&&r>=7*dpr){g.fillStyle=col;g.font=`700 ${Math.round(r*(n>99?0.82:1.0))}px 'Pretendard Variable',Pretendard,sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText(n,x,y+r*0.06)}
+  else{g.beginPath();g.arc(x,y,Math.max(1.5,r*0.28),0,7);g.fillStyle=col;g.fill()}
+}
 function renderStat(){
   const st={단독:0,붙음:0,겹침:0,눕힘:0,세움:0};
   result.pts.forEach(p=>{if(!p.off)st[p.type]++});
@@ -900,7 +969,7 @@ function saveRecord(){
   const recs=loadRecs();recs.unshift(rec);
   // 저장 공간이 부족하면 오래된 기록의 큰 사진부터 정리
   for(;;){try{storeRecs(recs);break}catch(e){const old=[...recs].reverse().find(r=>r.image);if(!old){toast('저장 공간이 부족합니다');return}delete old.image}}
-  toast(`✅ ${rec.name||'단일 분석'} ${rec.count}개 저장됨`);
+  toast(`${rec.name||'단일 분석'} ${rec.count}개를 기록했습니다`);
   $('drugName').value='';
   renderHistory();
   stepCapture();
@@ -932,8 +1001,8 @@ function openRecord(id){
     <img src="${r.image||r.thumb}" alt="계수 결과 사진">
     <div class="stat">${chips}</div>
     <div class="actions">
-      <button class="secondary" id="mDel">🗑 삭제</button>
-      <button class="secondary" id="mDown">⬇ 이미지 저장</button>
+      <button class="secondary" id="mDel">${ICON.trash}<span>삭제</span></button>
+      <button class="secondary" id="mDown">${ICON.down}<span>이미지 저장</span></button>
       <button class="primary" id="mClose">닫기</button>
     </div>`;
   $('modal').style.display='flex';
@@ -968,7 +1037,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='4.3';
+const APP_VERSION='4.4';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){
@@ -1046,41 +1115,41 @@ function openInv(id,keepDraft){
 
 function renderInvModal(){
   const t=totalOf(draft);
-  const step=(key,i)=>`<div class="stepper"><button data-k="${key}" data-i="${i}" data-d="-1">−</button><span>${key==='pack'?draft.packs[i].n:draft[key]}</span><button data-k="${key}" data-i="${i}" data-d="1">＋</button></div>`;
+  const step=(key,i)=>`<div class="stepper"><button data-k="${key}" data-i="${i}" data-d="-1" aria-label="빼기">−</button><span>${key==='pack'?draft.packs[i].n:draft[key]}</span><button data-k="${key}" data-i="${i}" data-d="1">＋</button></div>`;
   const hist=draft.history.slice(0,10).map(c=>`<tr><td>${fmtD(c.date)}</td><td>${fmtN(c.total)}정</td></tr>`).join('');
   $('modalBox').innerHTML=`
-    <div class="inv-head"><h2>${draft.isNew?'약품 등록':'재고 조사'}</h2><button class="x" id="iClose">✕</button></div>
+    <div class="inv-head"><h2>${draft.isNew?'약품 등록':'재고 조사'}</h2><button class="x" id="iClose" aria-label="닫기">${ICON.close}</button></div>
     <div class="name-with-btn">
       <input class="text" id="iName" placeholder="약품명 (예: 알닥톤필름코팅정 25mg)" value="${esc(draft.name)}" ${draft.isNew?'':'readonly'}>
-      <button class="secondary" id="iScan">▦ 바코드</button>
+      <button class="secondary" id="iScan">${ICON.bar}<span>바코드</span></button>
     </div>
-    ${draft.scan?`<div class="scan-info">${codeInfo(draft.scan)}${!draft.isNew||findDrugByCode(draft.scan.code)?'':'<br>➜ 약품명을 입력하고 등록하면 다음부터 이 바코드로 바로 찾습니다'}</div>`:''}
+    ${draft.scan?`<div class="scan-info">${codeInfo(draft.scan)}${!draft.isNew||findDrugByCode(draft.scan.code)?'':'<br>약품명을 입력하고 등록하면 다음부터 이 바코드로 바로 찾습니다'}</div>`:''}
     ${!draft.scan&&draft.barcodes&&draft.barcodes.length?`<div class="scan-info">연결된 바코드 ${draft.barcodes.join(', ')}</div>`:''}
     <div class="inv-total"><span>${new Date().toLocaleDateString('ko-KR')} 기준</span><b>${fmtN(t)}<small>정</small></b></div>
     ${draft.packs.map((p,i)=>`
       <div class="inv-line">
         <div class="lbl">${p.size}정/${esc(p.label)}</div>${step('pack',i)}<div class="unit">${esc(p.label)}</div>
-        <button class="mini" data-del="${i}" title="포장 단위 삭제">✕</button>
+        <button class="mini" data-del="${i}" title="포장 단위 삭제" aria-label="포장 단위 삭제">${ICON.close}</button>
       </div>`).join('')}
     <div class="inv-line">
       <div class="lbl">낱알</div>${step('loose',0)}<div class="unit">정</div>
-      <button class="mini cam" id="iCam" title="카메라로 세기">📷</button>
+      <button class="mini cam" id="iCam" title="카메라로 세기" aria-label="카메라로 세기">${ICON.cam}</button>
     </div>
     <div class="inv-addpack">
       <input class="text sm" id="pSize" type="number" inputmode="numeric" placeholder="정 수">
       <input class="text sm" id="pLabel" placeholder="단위" list="packLabels">
       <datalist id="packLabels"><option value="병"><option value="PTP"><option value="통"><option value="박스"></datalist>
-      <button class="secondary" id="pAdd">＋ 포장 단위</button>
+      <button class="secondary" id="pAdd">${ICON.plus}<span>포장 단위</span></button>
     </div>
     <div class="actions">
-      ${draft.isNew?'':'<button class="secondary" id="iDel">🗑 약품 삭제</button>'}
-      <button class="primary" id="iSave">✅ 등록</button>
+      ${draft.isNew?'':`<button class="secondary" id="iDel">${ICON.trash}<span>약품 삭제</span></button>`}
+      <button class="primary" id="iSave">${ICON.check}<span>등록</span></button>
     </div>
     ${hist?`<h3 class="inv-h3">이전 조사</h3><table class="inv-hist">${hist}</table>`:''}`;
   $('iName').oninput=e=>draft.name=e.target.value;
   $('iScan').onclick=()=>{const keep=draft;closeModal();openScanner(b=>{
     const d=findDrugByCode(b.code);
-    if(d&&d.id!==keep.id){openInv(d.id);draft.scan=b;renderInvModal();toast(`🔎 이미 등록된 약품: ${d.name}`);return}
+    if(d&&d.id!==keep.id){openInv(d.id);draft.scan=b;renderInvModal();toast(`이미 등록된 약품: ${d.name}`);return}
     draft=keep;draft.scan=b;openInv(keep.id,true);
   })};
   $('modalBox').querySelectorAll('.stepper button').forEach(b=>b.onclick=()=>{
@@ -1127,7 +1196,7 @@ function saveInv(){
   if(draft.scan){c.exp=draft.scan.exp||'';c.lot=draft.scan.lot||''}
   c.total=totalOf(c); d.checks.unshift(c); d.updated=c.date;
   storeInv(drugs); draft=null; closeModal(); renderInv();
-  toast(`✅ ${name} ${fmtN(c.total)}정 등록`);
+  toast(`${name} ${fmtN(c.total)}정을 등록했습니다`);
 }
 
 // 계수 결과 → 재고 등록 창의 낱알·반알로
@@ -1228,7 +1297,7 @@ const codeInfo=b=>b?[`바코드 ${b.code}`,b.exp&&`유통기한 ${b.exp}`,b.lot&
 function scanToInventory(){
   openScanner(b=>{
     const d=findDrugByCode(b.code);
-    if(d){ openInv(d.id); draft.scan=b; renderInvModal(); toast(`🔎 ${d.name}`); }
+    if(d){ openInv(d.id); draft.scan=b; renderInvModal(); toast(`${d.name}`); }
     else{ openInv(null); draft.scan=b; renderInvModal(); toast('처음 보는 바코드입니다. 약품명을 입력해 연결하세요'); }
   });
 }
@@ -1236,7 +1305,7 @@ function scanToInventory(){
 function scanToCountName(){
   openScanner(b=>{
     const d=findDrugByCode(b.code);
-    if(d){ $('drugName').value=d.name; toast(`🔎 ${d.name}`); }
+    if(d){ $('drugName').value=d.name; toast(`${d.name}`); }
     else{ $('drugName').value=''; $('drugName').focus(); toast('등록되지 않은 바코드입니다. 재고 탭에서 약품과 연결해 주세요'); }
   });
 }
