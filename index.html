@@ -207,7 +207,7 @@
 </head>
 <body>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v3.1</small></div></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v3.2</small></div></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -245,7 +245,8 @@
     <datalist id="drugList"></datalist>
   </div>
   <div class="actions" id="actions"></div>
-  <input type="file" id="file" accept="image/*" capture="environment">
+  <input type="file" id="file" accept="image/*">
+  <input type="file" id="fileCam" accept="image/*" capture="environment">
   </section>
 
   <!-- ===== 기록 화면 ===== -->
@@ -354,7 +355,7 @@
     <div class="card">
       <h2>화면이 예전 그대로일 때</h2>
       <ul>
-        <li>맨 위 제목 옆 버전이 <b>v3.1</b>이 아니면 예전 화면이 저장된 것입니다.</li>
+        <li>맨 위 제목 옆 버전이 <b>v3.2</b>이 아니면 예전 화면이 저장된 것입니다.</li>
         <li>브라우저에서 <b>새로고침</b>하거나, 홈 화면 앱이면 <b>앱을 완전히 닫았다가</b> 다시 여세요. 업데이트 후 최대 10분 정도 걸릴 수 있습니다.</li>
       </ul>
     </div>
@@ -405,7 +406,7 @@ function btn(label,cls,fn){const b=document.createElement('button');b.className=
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=3.1');
+  engine=new Worker('engine.js?v=3.2');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -435,7 +436,9 @@ function run(auto){
 
 /* ---------- 촬영 화면 ---------- */
 let liveOn=localStorage.getItem('pc.live')!=='0';   // 실시간 켜짐/꺼짐 (기본: 켜짐)
+let capSeq=0, picking=false;
 async function stepCapture(){
+  const my=++capSeq;
   $('nameRow').style.display='none';
   stopLive();
   setStep(1); result=null; seed=null; manual=[]; runTok++; $('busy').style.display='none';
@@ -448,19 +451,22 @@ async function stepCapture(){
       stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
       video.srcObject=stream;
     }
+    if(my!==capSeq){ if(stream&&!live){stream.getTracks().forEach(t=>t.stop());stream=null} return; } // 그 사이 사진을 불러왔으면 카메라를 끄고 끝냄
     await video.play().catch(()=>{});
+    if(my!==capSeq) return;
     video.classList.remove('hidden');
     captureButtons(true);
     if(liveOn) startLive(); else showPlainCamera();
   }catch(e){
+    if(my!==capSeq) return;
     guide.innerHTML='사진을 찍거나 불러오세요<small>이 브라우저에서는 실시간 카메라를 쓸 수 없어 사진 촬영 방식으로 진행합니다</small>';
   }
 }
 function captureButtons(camOk){
   actions.innerHTML='';
   if(camOk){ const t=btn(liveOn?'⚡ 실시간 ON':'⚡ 실시간 OFF','ghost toggle'+(liveOn?' on':''),toggleLive); t.setAttribute('aria-pressed',liveOn); }
-  btn('🖼 불러오기','ghost',()=>$('file').click());
-  btn('📷 촬영','primary cta',()=>{ if(!camOk) return $('file').click(); if(live) confirmLive(); else capture(); });
+  btn('🖼 불러오기','ghost',()=>{picking=true;$('file').click()});
+  btn('📷 촬영','primary cta',()=>{ if(!camOk){picking=true;return $('fileCam').click();} if(live) confirmLive(); else capture(); });
 }
 function toggleLive(){
   liveOn=!liveOn; localStorage.setItem('pc.live',liveOn?'1':'0');
@@ -541,13 +547,24 @@ function capture(){
   if(!video.videoWidth) return;
   loadSource(video, video.videoWidth, video.videoHeight);
 }
-$('file').onchange=e=>{
-  const f=e.target.files[0]; if(!f) return;
-  const img=new Image(); img.onload=()=>loadSource(img,img.naturalWidth,img.naturalHeight);
-  img.src=URL.createObjectURL(f); e.target.value='';
-};
+function onPickFile(e){
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  const url=URL.createObjectURL(f), img=new Image();
+  img.onload=()=>{ loadSource(img,img.naturalWidth,img.naturalHeight); URL.revokeObjectURL(url); };
+  img.onerror=()=>{ URL.revokeObjectURL(url); toast('이 사진 형식은 열 수 없습니다. JPG·PNG 사진을 선택해 주세요'); };
+  img.src=url;
+}
+$('file').onchange=onPickFile; $('fileCam').onchange=onPickFile;
+
+// 앱을 내렸다 다시 열면 카메라가 검게 멈추지 않도록 다시 켬
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){ if(stream||live) stopCam(); return; }
+  // 사진 고르는 중이었다면 잠시 기다렸다가, 사진을 안 골랐을 때만 카메라를 다시 켬
+  setTimeout(()=>{ if(!$('pgCount').classList.contains('hidden')&&$('s1').classList.contains('active')&&!result&&!stream){ picking=false; stepCapture(); } }, picking?1200:0);
+});
 
 function loadSource(src,w,h,normSeed){
+  capSeq++; picking=false;
   const s=MAXSIDE/Math.max(w,h); W=Math.round(w*s); H=Math.round(h*s);
   view.width=W; view.height=H; ctx.drawImage(src,0,0,W,H);
   photo=ctx.getImageData(0,0,W,H);
@@ -718,7 +735,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x===b));
   ['pgCount','pgHistory','pgInv','pgHelp'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.pg));
   if(b.dataset.pg==='pgCount'){ if(!result) stepCapture(); }
-  else stopCam();
+  else { stopCam(); invPending=null; }   // 재고 낱알 세기 도중 다른 탭으로 가면 연결 해제
   if(b.dataset.pg==='pgHistory') renderHistory();
   if(b.dataset.pg==='pgInv') renderInv();
   window.scrollTo(0,0);
