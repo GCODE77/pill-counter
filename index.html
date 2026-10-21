@@ -7,6 +7,8 @@
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="필카운터">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -203,19 +205,81 @@
   input.text{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.16)}
   input.text:focus{border-color:var(--gold2);box-shadow:0 0 0 3px rgba(245,197,24,.15)}
   .toast{box-shadow:0 10px 30px rgba(0,0,0,.4)}
+
+  /* ================= v4.0 PREMIUM — 블랙 & 샴페인 골드 ================= */
+  :root{--ink:#06070b;--glass:rgba(255,255,255,.035);--glass2:rgba(255,255,255,.06);--hair:rgba(255,255,255,.08);--hair2:rgba(255,255,255,.14);
+    --muted:#9aa0ad;--text:#f4f1ea;--g1:#f8ecc4;--g2:#e2c47e;--g3:#b88f3e;--gold:#e7cd8c}
+  html,body{font-family:"Pretendard Variable",Pretendard,"Malgun Gothic",system-ui,sans-serif;letter-spacing:-.01em;color:var(--text);
+    background:radial-gradient(900px 520px at 50% -180px,rgba(226,196,126,.16),transparent 70%),radial-gradient(700px 500px at 110% 110%,rgba(80,100,160,.10),transparent 70%),var(--ink)!important}
+  .ic{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  header{padding:4px 2px 2px}
+  header .brand{gap:12px}
+  header img{width:36px;height:36px;border-radius:10px;box-shadow:0 0 0 1px var(--hair2),0 6px 18px rgba(0,0,0,.5)}
+  .wordmark h1{font-size:20px;font-weight:700;margin:0;letter-spacing:-.02em}
+  .wordmark span{display:block;font-size:10px;letter-spacing:.32em;color:var(--gold);font-weight:600;margin-top:1px}
+  .ver{color:var(--muted);border:1px solid var(--hair2);border-radius:999px;padding:3px 9px;font-size:11px;font-weight:600;letter-spacing:.04em}
+  .steps{background:none;border:0;padding:0;gap:0;position:relative;margin:12px 2px}
+  .steps:before{content:"";position:absolute;left:16%;right:16%;top:13px;height:1px;background:linear-gradient(90deg,transparent,var(--hair2),transparent)}
+  .step{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;background:none!important;box-shadow:none!important;color:var(--muted);font-weight:600;padding:0}
+  .step i{font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--ink);border:1px solid var(--hair2);color:var(--muted);z-index:1}
+  .step.active{color:var(--gold)}
+  .step.active i{background:linear-gradient(145deg,var(--g1),var(--g2) 55%,var(--g3));color:#1b1405;border-color:transparent;box-shadow:0 0 0 4px rgba(226,196,126,.12),0 6px 16px rgba(226,196,126,.25)}
+  .step.done{color:#c9d3c4}
+  .step.done i{border-color:rgba(226,196,126,.5);color:var(--gold)}
+  .guide{background:var(--glass);border:1px solid var(--hair);border-left:0;border-radius:18px;box-shadow:none;padding:12px 16px;position:relative;backdrop-filter:blur(10px)}
+  .guide:before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:2px;border-radius:2px;background:linear-gradient(var(--g1),var(--g3))}
+  .guide b{color:var(--gold);font-weight:700}
+  .guide small{color:var(--muted)}
+  .count-badge{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid var(--hair);border-radius:20px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 40px rgba(0,0,0,.45);padding:8px 16px 10px;min-height:64px;font-weight:700;letter-spacing:-.03em;
+    color:transparent;background-clip:padding-box;position:relative}
+  .count-badge{-webkit-text-fill-color:initial}
+  .count-badge{font-size:40px;line-height:1.05;color:var(--g1);text-shadow:0 0 24px rgba(226,196,126,.25)}
+  .count-badge span{color:var(--muted);font-size:16px;font-weight:600;margin-left:4px;text-shadow:none}
+  .count-badge .lbl{font-size:10px;letter-spacing:.28em;color:var(--gold);font-weight:600;margin-bottom:2px;text-shadow:none;opacity:.9}
+  .count-badge .sub{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px;text-shadow:none}
+  .count-badge .wait{font-size:15px;color:var(--muted);font-weight:500;text-shadow:none;letter-spacing:0;display:block;padding:12px 0}
+  .stage{border-radius:22px;border:1px solid var(--hair);background:#000;box-shadow:0 20px 50px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.02)}
+  .busy{background:rgba(6,7,11,.55);backdrop-filter:blur(6px);color:var(--g1);font-size:16px;font-weight:600;letter-spacing:.06em}
+  button{font-weight:600;letter-spacing:-.01em;gap:7px}
+  .primary{background:linear-gradient(145deg,var(--g1) 0%,var(--g2) 45%,var(--g3) 100%);color:#1b1405;border:0;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 8px 22px rgba(226,196,126,.22)}
+  .primary .ic{stroke-width:2.1}
+  .ghost,.secondary{background:var(--glass);color:#e9e6de;border:1px solid var(--hair2);backdrop-filter:blur(8px)}
+  .actions .toggle.on{color:var(--gold);border-color:rgba(226,196,126,.55);background:rgba(226,196,126,.07)}
+  #pgCount .actions{background:linear-gradient(180deg,rgba(6,7,11,0),rgba(6,7,11,.94) 35%)}
+  nav.tabs{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));border-radius:22px;padding:6px;border:1px solid var(--hair2);
+    background:rgba(14,16,24,.78);backdrop-filter:blur(18px) saturate(140%);box-shadow:0 18px 40px rgba(0,0,0,.55)}
+  nav.tabs button{color:#7d8392;border-radius:16px;min-height:50px;gap:3px;font-weight:600}
+  nav.tabs button .ic{width:21px;height:21px}
+  nav.tabs button.on{color:var(--gold);background:rgba(226,196,126,.08)}
+  .app{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+  #pgCount .actions{bottom:calc(76px + env(safe-area-inset-bottom))}
+  .tune,.hist,.inv li,.help .card,.modal .box{background:var(--glass);border:1px solid var(--hair);border-radius:18px;backdrop-filter:blur(10px)}
+  .hist li{border-bottom:1px solid var(--hair)}
+  .hist .cnt,.inv .cnt,.inv-total b{color:var(--g1)!important;font-weight:700;letter-spacing:-.02em}
+  .help h2{color:var(--gold);font-weight:700}
+  .chip{background:rgba(255,255,255,.03);border:1px solid var(--hair2);font-weight:600}
+  .chip b{color:var(--gold)}
+  input.text{background:rgba(0,0,0,.35);border:1px solid var(--hair2);border-radius:14px}
+  input.text:focus{border-color:rgba(226,196,126,.7);box-shadow:0 0 0 3px rgba(226,196,126,.12)}
+  .tune input[type=range]{accent-color:var(--g2)}
+  .toast{background:rgba(20,22,30,.92);color:var(--g1);border:1px solid rgba(226,196,126,.4);backdrop-filter:blur(12px);font-weight:600}
+  .warn{background:rgba(244,63,94,.08);border-color:rgba(244,63,94,.45)}
+  .modal{background:rgba(3,4,8,.7);backdrop-filter:blur(6px)}
 </style>
 </head>
 <body>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v3.2</small></div></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.0</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
 
   <div class="steps">
-    <div class="step" id="s1">① 촬영</div>
-    <div class="step" id="s2">② 자동 계수</div>
-    <div class="step" id="s3">③ 결과</div>
+    <div class="step" id="s1"><i>1</i>촬영</div>
+    <div class="step" id="s2"><i>2</i>자동 계수</div>
+    <div class="step" id="s3"><i>3</i>결과</div>
   </div>
 
   <div class="guide" id="guide"></div>
@@ -240,7 +304,7 @@
     <label for="drugName">약 이름 (선택)</label>
     <div class="name-with-btn">
       <input class="text" id="drugName" placeholder="예) 타이레놀 500mg" list="drugList" autocomplete="off">
-      <button class="secondary" id="nameScan">▦ 바코드</button>
+      <button class="secondary" id="nameScan"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12"/></svg>바코드</button>
     </div>
     <datalist id="drugList"></datalist>
   </div>
@@ -260,10 +324,10 @@
   <section class="page hidden" id="pgInv">
     <div class="inv-bar">
       <input class="text" id="invQ" placeholder="🔍 약품명 검색">
-      <button class="secondary" id="invScan" title="바코드로 약품 찾기">▦ 바코드</button>
-      <button class="secondary" id="invExport" title="엑셀(CSV)로 내보내기">⬇ 엑셀</button>
+      <button class="secondary" id="invScan" title="바코드로 약품 찾기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12"/></svg>바코드</button>
+      <button class="secondary" id="invExport" title="엑셀(CSV)로 내보내기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg>엑셀</button>
     </div>
-    <button class="primary" id="invAdd" style="flex:none;margin-bottom:10px">＋ 약품 등록</button>
+    <button class="primary" id="invAdd" style="flex:none;margin-bottom:10px"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>약품 등록</button>
     <div class="hist-sum" id="invSum"></div>
     <ul class="inv" id="invList"></ul>
   </section>
@@ -313,9 +377,8 @@
         <tr><td><i class="dot" style="background:#22c55e"></i>단독</td><td>떨어져 있는 약 1알</td></tr>
         <tr><td><i class="dot" style="background:#e879f9"></i>붙음</td><td>맞닿은 약 — 한 알씩 나눠서 셈</td></tr>
         <tr><td><i class="dot" style="background:#f43f5e"></i>겹침</td><td>다른 약에 가려진 약 — <b>추정값, 꼭 확인</b></td></tr>
-        <tr><td><i class="dot" style="background:#38bdf8"></i>눕힘</td><td>옆으로 누운 약</td></tr>
-        <tr><td><i class="dot" style="background:#a78bfa"></i>세움</td><td>세로로 선 약 — <b>추정값, 꼭 확인</b></td></tr>
-        <tr><td>✕ 회색</td><td>반알·부서진 조각 — <b>세지 않음</b>. 온알인데 ✕가 붙었다면 터치해서 직접 추가하세요</td></tr>
+        <tr><td>✕ 회색</td><td>반알·부서진 조각 — <b>세지 않음</b></td></tr>
+        <tr><td>표시 없음</td><td>기준 약과 모양·크기·색이 다른 물건 — <b>세지 않음</b>. 빠졌다면 터치해서 추가</td></tr>
         <tr><td><i class="dot" style="background:#fff"></i>직접 추가</td><td>사용자가 터치로 추가한 약</td></tr>
       </table>
     </div>
@@ -355,7 +418,7 @@
     <div class="card">
       <h2>화면이 예전 그대로일 때</h2>
       <ul>
-        <li>맨 위 제목 옆 버전이 <b>v3.2</b>이 아니면 예전 화면이 저장된 것입니다.</li>
+        <li>맨 위 제목 옆 버전이 <b>v4.0</b>이 아니면 예전 화면이 저장된 것입니다.</li>
         <li>브라우저에서 <b>새로고침</b>하거나, 홈 화면 앱이면 <b>앱을 완전히 닫았다가</b> 다시 여세요. 업데이트 후 최대 10분 정도 걸릴 수 있습니다.</li>
       </ul>
     </div>
@@ -372,10 +435,10 @@
 </div>
 
 <nav class="tabs">
-  <button class="on" data-pg="pgCount"><i>📷</i>계수</button>
-  <button data-pg="pgHistory"><i>📋</i>기록</button>
-  <button data-pg="pgInv"><i>📦</i>재고</button>
-  <button data-pg="pgHelp"><i>❓</i>사용법</button>
+  <button class="on" data-pg="pgCount"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.5"/></svg>계수</button>
+  <button data-pg="pgHistory"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>기록</button>
+  <button data-pg="pgInv"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/></svg>재고</button>
+  <button data-pg="pgHelp"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.4"/><circle cx="12" cy="17" r=".6"/></svg>사용법</button>
 </nav>
 <div class="toast" id="toast"></div>
 <div class="scan" id="scan">
@@ -400,13 +463,14 @@ const MAXSIDE=900;
 function setStep(n){
   ['s1','s2','s3'].forEach((s,i)=>{$(s).className='step'+(i+1===n?' active':i+1<n?' done':'')});
 }
-function btn(label,cls,fn){const b=document.createElement('button');b.className=cls;b.textContent=label;b.onclick=fn;actions.appendChild(b);return b}
+const ICON={"cam": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z\"/><circle cx=\"12\" cy=\"12.5\" r=\"3.5\"/></svg>", "list": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M9 6h11M9 12h11M9 18h11\"/><circle cx=\"4.5\" cy=\"6\" r=\"1\"/><circle cx=\"4.5\" cy=\"12\" r=\"1\"/><circle cx=\"4.5\" cy=\"18\" r=\"1\"/></svg>", "box": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z\"/><path d=\"M3.5 7.5 12 12l8.5-4.5M12 12v9\"/></svg>", "help": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.4\"/><circle cx=\"12\" cy=\"17\" r=\".6\"/></svg>", "bolt": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M13 3 5 13.5h6L10 21l8-10.5h-6z\"/></svg>", "img": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"4.5\" width=\"17\" height=\"15\" rx=\"2.5\"/><circle cx=\"9\" cy=\"10\" r=\"1.6\"/><path d=\"m4 17 5-4.5 4 3.5 3-2.5 4 3.5\"/></svg>", "redo": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 12a8 8 0 1 0 2.4-5.7\"/><path d=\"M4 4v4.5h4.5\"/></svg>", "target": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"3.5\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3\"/></svg>", "check": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12.5 4.5 4.5L19 7.5\"/></svg>", "bar": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12\"/></svg>", "down": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14\"/></svg>", "plus": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg>", "pkg": "<svg class=\"ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z\"/><path d=\"M8 5.2l8.5 4.6\"/></svg>"};
+function btn(label,cls,fn,icon){const b=document.createElement('button');b.className=cls;b.innerHTML=(icon?ICON[icon]:'')+'<span>'+label+'</span>';b.onclick=fn;actions.appendChild(b);return b}
 
 /* ---------- 계수 엔진 (백그라운드 작업) ----------
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=3.2');
+  engine=new Worker('engine.js?v=4.0');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -428,7 +492,7 @@ function run(auto){
   analyze(photo,auto?null:seed,auto).then(d=>{
     if(tok!==runTok) return;                       // 더 새로운 요청이 있으면 버림
     $('busy').style.display='none';
-    if(d.none){ stepPick(); toast(d.timeout?'너무 오래 걸려 멈췄습니다. 셀 약 한 알을 터치해 주세요':'같은 약을 자동으로 찾지 못했습니다. 셀 약을 터치하세요'); return; }
+    if(d.none){ stepPick(); toast(d.timeout?'너무 오래 걸려 멈췄습니다. 셀 약 한 알을 터치해 주세요':'같은 모양의 약을 찾지 못했습니다. 셀 약을 터치하거나 다시 찍어 주세요'); return; }
     seed=d.seed; result={pts:d.pts,stat:d.stat,r:d.r,mask:d.mask};
     draw(); stepResult();
   });
@@ -464,9 +528,9 @@ async function stepCapture(){
 }
 function captureButtons(camOk){
   actions.innerHTML='';
-  if(camOk){ const t=btn(liveOn?'⚡ 실시간 ON':'⚡ 실시간 OFF','ghost toggle'+(liveOn?' on':''),toggleLive); t.setAttribute('aria-pressed',liveOn); }
-  btn('🖼 불러오기','ghost',()=>{picking=true;$('file').click()});
-  btn('📷 촬영','primary cta',()=>{ if(!camOk){picking=true;return $('fileCam').click();} if(live) confirmLive(); else capture(); });
+  if(camOk){ const t=btn(liveOn?'실시간 ON':'실시간 OFF','ghost toggle'+(liveOn?' on':''),toggleLive,'bolt'); t.setAttribute('aria-pressed',liveOn); }
+  btn('불러오기','ghost',()=>{picking=true;$('file').click()},'img');
+  btn('촬영','primary cta',()=>{ if(!camOk){picking=true;return $('fileCam').click();} if(live) confirmLive(); else capture(); },'cam');
 }
 function toggleLive(){
   liveOn=!liveOn; localStorage.setItem('pc.live',liveOn?'1':'0');
@@ -475,7 +539,7 @@ function toggleLive(){
 }
 function showPlainCamera(){
   view.classList.add('hidden'); video.classList.remove('hidden'); badge.style.display='none';
-  guide.innerHTML='약을 펼쳐 놓고 <b>📷 촬영</b>을 누르세요<small>화면을 눌러도 촬영됩니다 · 찍으면 자동으로 셉니다</small>';
+  guide.innerHTML='약을 펼쳐 놓고 촬영하세요<small>화면을 눌러도 촬영됩니다 · 찍으면 자동으로 셉니다</small>';
 }
 function stopCam(){ stopLive(); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden') }
 
@@ -489,8 +553,8 @@ function startLive(){
   live={busy:false,auto:true,seed:null,raf:0,last:null};
   video.classList.remove('hidden'); view.classList.add('hidden'); ovl.classList.remove('hidden');
   octx.clearRect(0,0,ovl.width,ovl.height);
-  guide.innerHTML='⚡ 비추기만 하면 자동으로 셉니다<small>숫자가 멈추면 <b>📷 촬영</b> · 다른 약은 화면에서 터치</small>';
-  badge.style.display='block'; badge.innerHTML='<span class="wait">약을 비춰 주세요</span>';
+  guide.innerHTML='비추기만 하면 자동으로 셉니다<small>숫자가 멈추면 <b>촬영</b> · 다른 약을 세려면 그 약을 터치</small>';
+  badge.style.display='block'; badge.innerHTML='<span class="wait">약이 보이지 않습니다 · 약을 비춰 주세요</span>';
   liveLoop();
 }
 function liveLoop(){
@@ -505,7 +569,7 @@ function liveLoop(){
     analyze(img,L.auto?null:L.seed,L.auto,4000).then(d=>{
       L.busy=false; if(live!==L) return;
       L.fw=w; L.fh=h;
-      if(d.none){ L.last=null; octx.clearRect(0,0,ovl.width,ovl.height); badge.innerHTML='<span class="wait">약을 비춰 주세요</span>'; return; }
+      if(d.none){ L.last=null; octx.clearRect(0,0,ovl.width,ovl.height); badge.innerHTML='<span class="wait">약이 보이지 않습니다 · 약을 비춰 주세요</span>'; return; }
       L.last=d;
       if(!L.auto){ // 고른 약이 움직여도 따라감
         let best=null,bd=1e9; d.pts.forEach(p=>{if(p.type==='제외')return;const q=Math.hypot(p.x-L.seed.x,p.y-L.seed.y);if(q<bd){bd=q;best=p}});
@@ -531,7 +595,7 @@ function drawOverlay(d){
     if(r>9*dpr){octx.fillStyle='#000';octx.font=`800 ${Math.round(r*(n>99?0.85:1.05))}px sans-serif`;octx.textAlign='center';octx.textBaseline='middle';octx.fillText(n,x,y+dpr)}
   });
   if(live&&!live.auto&&live.seed){octx.lineWidth=3*dpr;octx.strokeStyle='#facc15';octx.beginPath();octx.arc(live.seed.x*s,live.seed.y*s,r*1.9,0,7);octx.stroke()}
-  badge.innerHTML=`${n}<span>개</span><div class="sub">${live&&live.auto?'실시간 · 자동':'실시간 · 고른 약'}</div>`;
+  badge.innerHTML=`<div class="lbl">${live&&live.auto?'LIVE · 자동 인식':'LIVE · 고른 약'}</div>${n}<span>개</span>`;
 }
 function stopLive(){
   if(live){cancelAnimationFrame(live.raf);live=null}
@@ -569,7 +633,7 @@ function loadSource(src,w,h,normSeed){
   view.width=W; view.height=H; ctx.drawImage(src,0,0,W,H);
   photo=ctx.getImageData(0,0,W,H);
   stopCam(); view.classList.remove('hidden');
-  setStep(2); badge.style.display='none'; actions.innerHTML=''; btn('↺ 다시 촬영','ghost',stepCapture);
+  setStep(2); badge.style.display='none'; actions.innerHTML=''; btn('다시 촬영','ghost',stepCapture,'redo');
   guide.innerHTML='자동으로 세는 중…<small>잠시만 기다려 주세요</small>';
   manual=[]; result=null;
   if(normSeed){ seed={x:Math.round(normSeed.x*W),y:Math.round(normSeed.y*H)}; run(false); }
@@ -579,18 +643,18 @@ function loadSource(src,w,h,normSeed){
 function stepPick(){
   $('nameRow').style.display='none';
   setStep(2); result=null; ctx.putImageData(photo,0,0); badge.style.display='none'; $('tune').style.display='none';
-  guide.innerHTML='👆 셀 약 <u>한 알</u>을 터치하세요<small>여러 종류가 섞여 있거나 자동으로 고른 약이 아닐 때 사용합니다</small>';
-  actions.innerHTML=''; btn('↺ 다시 촬영','ghost',stepCapture);
+  guide.innerHTML='셀 약 <b>한 알</b>을 터치하세요<small>그 약과 같은 모양·크기·색만 셉니다</small>';
+  actions.innerHTML=''; btn('다시 촬영','ghost',stepCapture,'redo');
 }
 
 function stepResult(){
   setStep(3); $('tune').style.display='block';
-  guide.innerHTML='✅ 자동으로 셌습니다<small>빠진 약 터치 → 추가 · 잘못된 표시 터치 → 삭제</small>';
+  guide.innerHTML='계수를 마쳤습니다<small>빠진 약은 터치해 추가 · 잘못된 표시는 터치해 삭제</small>';
   actions.innerHTML='';
-  btn('↺ 다시 촬영','ghost',stepCapture);
-  btn('🎯 직접 선택','ghost',stepPick);
-  if(invPending) btn(`📦 낱알로 반영`,'primary cta',applyCountToInv);
-  else btn('✅ 기록 저장','primary cta',saveRecord);
+  btn('다시 촬영','ghost',stepCapture,'redo');
+  btn('직접 선택','ghost',stepPick,'target');
+  if(invPending) btn('낱알로 반영','primary cta',applyCountToInv,'pkg');
+  else btn('기록 저장','primary cta',saveRecord,'check');
   $('nameRow').style.display=invPending?'none':'block';
 }
 
@@ -644,7 +708,7 @@ function draw(){
   manual.forEach(p=>mark(p,'#ffffff'));
   renderStat();
   result.total=n; result.whole=n;
-  badge.innerHTML=`${n}<span>개</span>`+(skipped?`<div class="sub">반알·조각 ${skipped}개는 세지 않음 (회색 ✕)</div>`:'');
+  badge.innerHTML=`<div class="lbl">TOTAL · 총 개수</div>${n}<span>개</span>`+(skipped?`<div class="sub">반알·조각 ${skipped}개 제외</div>`:'');
   badge.style.display='block';
 }
 
@@ -655,9 +719,9 @@ function renderStat(){
   const chips=Object.entries(st).filter(([,v])=>v).map(([k,v])=>`<span class="chip"><i class="dot" style="background:${TYPE_COLOR[k]}"></i>${k} <b>${v}</b></span>`);
   if(manual.length) chips.push(`<span class="chip"><i class="dot" style="background:#fff"></i>직접 추가 <b>${manual.length}</b></span>`);
   $('stat').innerHTML=chips.join('');
-  const warn=st.겹침+st.세움;
+  const warn=st.겹침;
   $('warn').style.display=warn?'block':'none';
-  $('warn').innerHTML=`⚠ 겹치거나 세워진 약 <b>${warn}개</b>는 추정값입니다. 빨간·보라 표시를 확인하거나, 약을 펼쳐 다시 찍으면 더 정확합니다.`;
+  $('warn').innerHTML=`겹친 약 <b>${warn}개</b>는 추정값입니다. 빨간 표시를 확인하거나 약을 펼쳐 다시 찍으면 더 정확합니다.`;
 }
 
 /* ---------- 기록 (이 기기 localStorage에 저장) ---------- */

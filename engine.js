@@ -135,9 +135,9 @@ function count(){
              (!round&&sh.len<Lp*0.75&&sh.wid>Wp*0.75) ||               // 긴 약을 가로로 자른 반알: 길이만 절반
              (round&&sh.len>Lp*0.8&&sh.wid>Wp*0.42&&sh.wid<Wp*0.75)))  // 둥근 약 반알: 반달 모양
           type='제외';                                          // 반알·조각: 온알 개수에 넣지 않음
-        else if(ratio<0.8&&sh.len<Lp*0.75) type='세움';   // 세로로 세워진 약: 길이가 짧게 보임
-        else if(ratio<0.8) type='눕힘';                        // 옆으로 누운 약: 길이는 같고 폭이 좁음
-        else type='단독';
+        // 기준 약과 '같은 모습'일 때만 셈: 면적·길이·폭이 모두 기준 범위 안
+        else if(ratio>=0.65&&ratio<=1.5&&sh.len>=Lp*0.75&&sh.len<=Lp*1.3&&sh.wid>=Wp*0.7&&sh.wid<=Wp*1.4) type='단독';
+        else return;                                           // 기준과 다른 모양(다른 물건·그림자·무늬)은 세지 않음
       }
     }else{
       // 붙은 무더기: 약 1알마다 중심부 크기로 판정 — 일부가 가려져 중심부가 작으면 '겹침'
@@ -162,7 +162,10 @@ function count(){
     const centers=kmeans(o.px,k);
     centers.forEach(c=>pts.push({x:c.x,y:c.y,type}));
   });
-  return {pts,stat,r:r0*1.6,mask};
+  // 물체가 주변과 뚜렷이 구분되는지(대비): 덩어리 바로 바깥 테두리의 평균색과 기준색 차이
+  let rl=0,ra=0,rb=0,rn=0; { const d3=dilate(dilate(dilate(mask))); for(let i=0;i<N;i+=2) if(d3[i]&&!mask[i]){rl+=lab[i*3];ra+=lab[i*3+1];rb+=lab[i*3+2];rn++} }
+  const contrast=rn?Math.hypot((rl/rn-L)*0.5,ra/rn-A,rb/rn-B):0;
+  return {pts,stat,r:r0*1.6,mask,contrast,singles:stat.단독+stat.붙음};   // 기준과 같은 크기로 확인된 알 수
 }
 
 function commonSize(areas,hint){
@@ -199,7 +202,7 @@ function autoSeedCore(){
     m=erode(dilate(dilate(erode(m))));                 // 잡티 제거 + 글씨·반사 작은 구멍 메움
     const {blobs}=label(m), cand=[];
     blobs.forEach(px=>{
-      if(px.length<Math.max(6,N*0.0001)||px.length>N*0.06) return;
+      if(px.length<Math.max(20,N*0.0003)||px.length>N*0.06) return;   // 너무 작은 점(잡티)·너무 큰 면(배경) 제외
       let edge=0,sx=0,sy=0; for(const p of px){sx+=p%W;sy+=(p/W)|0;if(!m[p-1]||!m[p+1]||!m[p-W]||!m[p+W])edge++}
       const rough=edge*edge/(4*Math.PI*px.length);
       if(rough>2.6) return;                            // 들쭉날쭉한 것(반사·그림자·종이 모서리) 제외
@@ -318,7 +321,10 @@ self.onmessage=e=>{
     if(!s){ self.postMessage({id:m.id,none:true}); return; }
     seed=s;
     const r=count();
-    if(!r.pts.filter(p=>p.type!=='제외').length&&m.auto){ self.postMessage({id:m.id,none:true}); return; }
+    const counted=r.pts.filter(p=>p.type!=='제외').length;
+    // 자동 모드 검증: 기준과 똑같은 모습의 물체가 3개 이상이고, 주변과 뚜렷이 달라야 '약'으로 인정
+    self.lastCheck={counted,singles:r.singles,contrast:r.contrast};
+    if(m.auto&&(counted<2||(r.singles||0)<3||(r.contrast||0)<14)){ self.postMessage({id:m.id,none:true,check:self.lastCheck}); return; }
     self.postMessage({id:m.id,seed:s,pts:r.pts,stat:r.stat||{},r:r.r,mask:r.mask},[r.mask.buffer]);
   }catch(err){ self.postMessage({id:m.id,none:true,error:String(err)}); }
 };
