@@ -140,7 +140,7 @@
 </head>
 <body>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1></div></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v2.0</small></div></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -214,6 +214,15 @@
       </ol>
     </div>
     <div class="card">
+      <h2>⚡ 실시간 계수</h2>
+      <ol>
+        <li>촬영 화면에서 <b>⚡ 실시간</b>을 누릅니다.</li>
+        <li>카메라 화면에서 약 <b>한 알</b>을 터치하면, 비추는 동안 개수가 계속 바뀌며 표시됩니다.</li>
+        <li>숫자가 안정되면 <b>✅ 확정</b>을 누르세요. 고화질 사진으로 다시 정밀하게 세어 결과 화면으로 넘어갑니다.</li>
+        <li>실시간 숫자는 빠른 미리보기용입니다. 최종 수량은 <b>확정 후 결과</b>를 기준으로 하세요.</li>
+      </ol>
+    </div>
+    <div class="card">
       <h2>② 기준 약 선택</h2>
       <ol>
         <li>셀 약 중 <b>다른 약과 떨어져 있는 온전한 한 알</b>을 손가락으로 터치합니다. (반알·조각은 세지 않습니다)</li>
@@ -274,6 +283,13 @@
       </ol>
     </div>
     <div class="card">
+      <h2>화면이 예전 그대로일 때</h2>
+      <ul>
+        <li>맨 위 제목 옆 버전이 <b>v2.0</b>이 아니면 예전 화면이 저장된 것입니다.</li>
+        <li>브라우저에서 <b>새로고침</b>하거나, 홈 화면 앱이면 <b>앱을 완전히 닫았다가</b> 다시 여세요. 업데이트 후 최대 10분 정도 걸릴 수 있습니다.</li>
+      </ul>
+    </div>
+    <div class="card">
       <h2>기록 · 홈 화면 추가</h2>
       <ul>
         <li><b>기록</b> 탭: 저장한 결과를 최신순으로 보고, 약 이름으로 검색합니다. 항목을 누르면 사진 확대·이미지 저장·삭제가 됩니다.</li>
@@ -318,6 +334,7 @@ function btn(label,cls,fn){const b=document.createElement('button');b.className=
 
 async function stepCapture(){
   $('nameRow').style.display='none';
+  stopLive();
   setStep(1); result=null; seed=null; manual=[];
   badge.style.display='none'; $('tune').style.display='none';
   view.classList.add('hidden');
@@ -328,12 +345,54 @@ async function stepCapture(){
   try{
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
     video.srcObject=stream; video.classList.remove('hidden');
+    btn('⚡ 실시간','secondary',startLive);
   }catch(e){
     shot.textContent='📷 촬영'; shot.onclick=()=>$('file').click();
     guide.innerHTML='아래 버튼으로 사진을 찍거나 불러오세요<small>이 브라우저에서는 실시간 카메라를 쓸 수 없어 사진 촬영 방식으로 진행합니다</small>';
   }
 }
-function stopCam(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden') }
+function stopCam(){ stopLive(); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden') }
+
+/* ---------- 실시간(라이브) 계수 ---------- */
+// 카메라 영상을 작은 크기로 계속 세어서 보여주고, '확정'을 누르면 고화질로 다시 정밀 계수
+let live=null;
+const LIVE_SIDE=480;
+function startLive(){
+  if(!video.videoWidth) return;
+  live={t:0}; seed=null; manual=[]; result=null;
+  video.classList.add('hidden'); view.classList.remove('hidden');
+  guide.innerHTML='⚡ 실시간 계수 중 — 화면에서 약 <u>한 알</u>을 터치하세요<small>숫자가 안정되면 <b>✅ 확정</b>을 누르세요. 고화질로 다시 정밀하게 셉니다</small>';
+  actions.innerHTML='';
+  btn('■ 끄기','secondary',stepCapture);
+  btn('✅ 확정','primary',confirmLive);
+  liveTick();
+}
+function liveTick(){
+  if(!live) return;
+  const vw=video.videoWidth, vh=video.videoHeight;
+  if(vw){
+    const k=LIVE_SIDE/Math.max(vw,vh); W=Math.round(vw*k); H=Math.round(vh*k);
+    if(view.width!==W||view.height!==H){view.width=W;view.height=H}
+    ctx.drawImage(video,0,0,W,H); photo=ctx.getImageData(0,0,W,H);
+    if(seed){
+      try{
+        lab=toLab(photo.data); result=count(); draw();
+        // 기준 약이 움직여도 따라가도록: 가장 가까운 약 위치로 기준점 이동
+        let best=null,bd=1e9; result.pts.forEach(p=>{if(p.type==='제외')return;const d=Math.hypot(p.x-seed.x,p.y-seed.y);if(d<bd){bd=d;best=p}});
+        if(best) seed={x:Math.round(best.x),y:Math.round(best.y)};
+        ctx.lineWidth=3;ctx.strokeStyle='#facc15';ctx.beginPath();ctx.arc(seed.x,seed.y,Math.max(10,result.r*0.9),0,7);ctx.stroke();
+      }catch(e){}
+    }else badge.style.display='none';
+  }
+  live.t=setTimeout(liveTick,60);
+}
+function stopLive(){ if(live){clearTimeout(live.t);live=null} }
+function confirmLive(){
+  if(!seed){toast('먼저 화면에서 약 한 알을 터치하세요');return}
+  const rx=seed.x/W, ry=seed.y/H; stopLive();
+  loadSource(video,video.videoWidth,video.videoHeight);
+  seed={x:Math.round(rx*W),y:Math.round(ry*H)}; manual=[]; run();
+}
 
 function capture(){
   if(!video.videoWidth) return;
@@ -375,6 +434,7 @@ video.addEventListener('click',capture);
 view.addEventListener('click',e=>{
   const r=view.getBoundingClientRect();
   const x=Math.round((e.clientX-r.left)*W/r.width), y=Math.round((e.clientY-r.top)*H/r.height);
+  if(live){ seed={x,y}; return; }
   if($('s2').classList.contains('active')){ seed={x,y}; manual=[]; run(); return; }
   if(!result) return;
   const rad=Math.max(12,result.r*0.8);
@@ -465,7 +525,12 @@ function count(){
   const coresOf=full.blobs.map(()=>[]);
   blobs.forEach((px,k)=>coresOf[full.lbl[px[0]]].push(k));
   const coreK=px=>{const r=px.length/unit;return r<0.35?0:r<1.7?1:Math.round(r-0.15)};
-  const info=full.blobs.map((px,f)=>({px,f,shape:pca(px),n:coresOf[f].reduce((s,k)=>s+coreK(blobs[k]),0)}));
+  // 덩어리별 '하얗게 날아간(255에 가까운) 픽셀' 비율과 테두리 거칠기 → 빛 반사 판별용
+  const pd=photo.data;
+  const blobFeat=px=>{let clip=0,edge=0;for(const p of px){const j=p*4;if(pd[j]>245&&pd[j+1]>245&&pd[j+2]>245)clip++;
+      const x=p%W;if(x==0||x==W-1||p<W||p>=N-W||!mask[p-1]||!mask[p+1]||!mask[p-W]||!mask[p+W])edge++}
+    return {clip:clip/px.length,rough:edge*edge/(4*Math.PI*px.length)}};
+  const info=full.blobs.map((px,f)=>({px,f,shape:pca(px),...blobFeat(px),n:coresOf[f].reduce((s,k)=>s+coreK(blobs[k]),0)}));
   // 기준 약 1알의 모양 = 터치한 약과 비슷한 '단독' 덩어리들의 중앙값
   const sf=full.lbl[blobs[ref][0]], sInfo=info[sf], sArea=sInfo.px.length/Math.max(1,sInfo.n);
   const singles=info.filter(o=>o.n===1&&o.px.length>sArea*0.6&&o.px.length<sArea*1.5);
@@ -478,6 +543,9 @@ function count(){
   info.forEach(o=>{
     const area=o.px.length, ratio=area/Ap, sh=o.shape;
     if(ratio<0.15||(ratio<0.3&&sh.wid<Wp*0.4)) return;     // 부스러기·노이즈 (세운 약은 작지만 둥글어서 통과)
+    // 빛 반사: 기준 약보다 훨씬 하얗게 날아갔거나, 테두리가 약답지 않게 들쭉날쭉하면 버림
+    if(o.clip>Math.max(0.2,sInfo.clip+0.15)) return;
+    if(o.n<=1&&o.rough>Math.max(2.2,sInfo.rough*1.8)) return;
     let k=o.n, type;
     if(k<=1){
       if(ratio>1.15&&(sh.len>Lp*1.35||sh.wid>Wp*1.45)){ k=Math.max(2,Math.round(ratio-0.1)); type='겹침'; }
