@@ -31,6 +31,7 @@
   video,canvas.view{max-width:100%;max-height:62vh;display:block;touch-action:manipulation}
   .count-badge{text-align:center;margin:0 0 10px;background:var(--primary);color:var(--primary-text);
     border-radius:16px;padding:6px 22px;font-size:44px;font-weight:900;box-shadow:0 4px 18px rgba(0,0,0,.5);display:none;white-space:nowrap}
+  .count-badge .sub{font-size:17px;font-weight:700;margin-top:-4px}
   .count-badge span{font-size:22px;font-weight:800;margin-left:4px}
   .busy{position:absolute;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font-size:22px;font-weight:800}
   .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
@@ -153,7 +154,7 @@
     <div class="card">
       <h2>② 기준 약 선택</h2>
       <ol>
-        <li>셀 약 중 <b>다른 약과 떨어져 있는 한 알</b>을 손가락으로 터치합니다.</li>
+        <li>셀 약 중 <b>다른 약과 떨어져 있는 온전한 한 알</b>을 손가락으로 터치합니다. (반알을 터치하면 반알이 기준이 됩니다)</li>
         <li>바로 개수를 세기 시작합니다.</li>
       </ol>
     </div>
@@ -173,6 +174,7 @@
         <tr><td><i class="dot" style="background:#f43f5e"></i>겹침</td><td>다른 약에 가려진 약 — <b>추정값, 꼭 확인</b></td></tr>
         <tr><td><i class="dot" style="background:#38bdf8"></i>눕힘</td><td>옆으로 누운 약</td></tr>
         <tr><td><i class="dot" style="background:#a78bfa"></i>세움</td><td>세로로 선 약 — <b>추정값, 꼭 확인</b></td></tr>
+        <tr><td><i class="dot" style="background:linear-gradient(90deg,#fb923c 50%,#fff 50%)"></i>반알 ½</td><td>쪼갠 약 — <b>0.5개</b>로 셈</td></tr>
         <tr><td><i class="dot" style="background:#fff"></i>직접 추가</td><td>사용자가 터치로 추가한 약</td></tr>
       </table>
     </div>
@@ -361,7 +363,7 @@ function count(){
   const Lp=singles.length>=3?med(o=>o.shape.len):sInfo.shape.len;
   const Wp=singles.length>=3?med(o=>o.shape.wid):sInfo.shape.wid;
   // 8) 덩어리마다 유형 판정 + 개수
-  const pts=[], stat={단독:0,붙음:0,겹침:0,눕힘:0,세움:0};
+  const pts=[], stat={단독:0,붙음:0,겹침:0,눕힘:0,세움:0,반알:0};
   info.forEach(o=>{
     const area=o.px.length, ratio=area/Ap, sh=o.shape;
     if(ratio<0.15||(ratio<0.3&&sh.wid<Wp*0.4)) return;     // 부스러기·노이즈 (세운 약은 작지만 둥글어서 통과)
@@ -370,7 +372,12 @@ function count(){
       if(ratio>1.15&&(sh.len>Lp*1.35||sh.wid>Wp*1.45)){ k=Math.max(2,Math.round(ratio-0.1)); type='겹침'; }
       else{
         k=1;
-        if(ratio<0.8&&sh.len<Lp*0.75) type='세움';   // 세로로 세워진 약: 길이가 짧게 보임
+        const round=Lp<Wp*1.3;
+        if(ratio>=0.32&&ratio<=0.68&&(
+             (!round&&sh.len<Lp*0.75&&sh.wid>Wp*0.75) ||               // 긴 약을 가로로 자른 반알: 길이만 절반
+             (round&&sh.len>Lp*0.8&&sh.wid>Wp*0.42&&sh.wid<Wp*0.75)))  // 둥근 약 반알: 반달 모양
+          type='반알';
+        else if(ratio<0.8&&sh.len<Lp*0.75) type='세움';   // 세로로 세워진 약: 길이가 짧게 보임
         else if(ratio<0.8) type='눕힘';                        // 옆으로 누운 약: 길이는 같고 폭이 좁음
         else type='단독';
       }
@@ -469,8 +476,16 @@ function draw(){
   for(let i=0;i<W*H;i++) if(!result.mask[i]){d[i*4]*=0.45;d[i*4+1]*=0.45;d[i*4+2]*=0.45}
   ctx.putImageData(ov,0,0);
   const r=Math.max(7,Math.min(20,result.r*0.45));
-  let n=0;
+  let n=0, halves=0;
+  const half=p=>{
+    halves++;
+    ctx.beginPath();ctx.arc(p.x,p.y,r,0,7);ctx.fillStyle='#fff';ctx.fill();
+    ctx.beginPath();ctx.arc(p.x,p.y,r,Math.PI/2,Math.PI*1.5);ctx.fillStyle=TYPE_COLOR.반알;ctx.fill();
+    ctx.beginPath();ctx.arc(p.x,p.y,r,0,7);ctx.lineWidth=2.5;ctx.strokeStyle='#000';ctx.stroke();
+    ctx.fillStyle='#000';ctx.font=`900 ${Math.round(r*1.1)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('½',p.x,p.y+1);
+  };
   const mark=(p,col)=>{
+    if(p.type==='반알') return half(p);
     n++;
     ctx.beginPath();ctx.arc(p.x,p.y,r,0,7);ctx.fillStyle=col;ctx.fill();
     ctx.lineWidth=2.5;ctx.strokeStyle='#000';ctx.stroke();
@@ -480,13 +495,14 @@ function draw(){
   result.pts.filter(p=>!p.off).forEach(p=>mark(p,TYPE_COLOR[p.type]));
   manual.forEach(p=>mark(p,'#ffffff'));
   renderStat();
-  badge.innerHTML=`${n}<span>개</span>`; badge.style.display='block';
-  result.total=n;
+  result.total=n+halves/2; result.whole=n; result.halves=halves;
+  badge.innerHTML=`${result.total}<span>개</span>`+(halves?`<div class="sub">온알 ${n} · 반알 ${halves}</div>`:'');
+  badge.style.display='block';
 }
 
-const TYPE_COLOR={단독:'#22c55e',붙음:'#e879f9',겹침:'#f43f5e',눕힘:'#38bdf8',세움:'#a78bfa'};
+const TYPE_COLOR={단독:'#22c55e',붙음:'#e879f9',겹침:'#f43f5e',눕힘:'#38bdf8',세움:'#a78bfa',반알:'#fb923c'};
 function renderStat(){
-  const st={단독:0,붙음:0,겹침:0,눕힘:0,세움:0};
+  const st={단독:0,붙음:0,겹침:0,눕힘:0,세움:0,반알:0};
   result.pts.forEach(p=>{if(!p.off)st[p.type]++});
   const chips=Object.entries(st).filter(([,v])=>v).map(([k,v])=>`<span class="chip"><i class="dot" style="background:${TYPE_COLOR[k]}"></i>${k} <b>${v}</b></span>`);
   if(manual.length) chips.push(`<span class="chip"><i class="dot" style="background:#fff"></i>직접 추가 <b>${manual.length}</b></span>`);
