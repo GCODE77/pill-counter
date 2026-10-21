@@ -1,0 +1,5 @@
+{
+  "version": "4.2",
+  "notes": "플래시 켜기, 새 버전 알림·업데이트 추가",
+  "files": ["index.html", "engine.js", "manifest.webmanifest"]
+}

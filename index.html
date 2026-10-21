@@ -273,11 +273,26 @@
   .focus-ring.on{animation:focusPulse 1.1s ease-out forwards}
   @keyframes focusPulse{0%{opacity:0;transform:scale(1.5)}18%{opacity:1;transform:scale(1)}30%{transform:scale(1.06)}42%{transform:scale(1)}80%{opacity:1}100%{opacity:0}}
   .stage video{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .flash-btn{position:absolute;top:10px;right:10px;z-index:6;flex:none;min-height:34px;padding:6px 11px;border-radius:999px;font-size:13px;font-weight:600;
+    background:rgba(10,12,18,.55);color:#e9e6de;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(10px)}
+  .flash-btn .ic{width:15px;height:15px}
+  .flash-btn.on{background:linear-gradient(145deg,var(--g1),var(--g2) 55%,var(--g3));color:#1b1405;border-color:transparent;box-shadow:0 0 18px rgba(226,196,126,.45)}
+  .update-bar{position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top));z-index:70;display:flex;align-items:center;gap:10px;padding:10px 10px 12px 14px;
+    border-radius:18px;background:rgba(16,18,26,.92);border:1px solid rgba(226,196,126,.45);backdrop-filter:blur(16px);box-shadow:0 18px 40px rgba(0,0,0,.55);
+    transform:translateY(-140%);transition:transform .35s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+  .update-bar.show{transform:none}
+  .update-bar .u-txt{flex:1;min-width:0}
+  .update-bar .u-txt b{display:block;color:var(--g1);font-size:15px}
+  .update-bar .u-txt small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .update-bar .primary{flex:none;min-height:40px;padding:8px 14px;font-size:14px}
+  .update-bar .u-x{flex:none;min-height:34px;width:34px;padding:0;background:none;color:var(--muted);font-size:16px}
+  .update-bar .u-prog{position:absolute;left:0;right:0;bottom:0;height:2px;background:transparent}
+  .update-bar .u-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--g1),var(--g3));transition:width .2s}
 </style>
 </head>
 <body>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.1</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.2</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -296,6 +311,9 @@
     <canvas id="view" class="view hidden"></canvas>
     <canvas id="ovl" class="ovl hidden"></canvas>
     <div class="focus-ring" id="focusRing"></div>
+    <button class="flash-btn hidden" id="flashBtn" aria-label="플래시" aria-pressed="false">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg><span>플래시</span>
+    </button>
     <div class="busy" id="busy">세는 중…</div>
   </div>
 
@@ -424,9 +442,17 @@
       </ol>
     </div>
     <div class="card">
+      <h2>업데이트 · 플래시</h2>
+      <ul>
+        <li>새 버전이 나오면 화면 위에 <b>"새 버전이 나왔습니다"</b> 알림이 뜹니다. <b>업데이트</b>를 누르면 새 파일을 내려받고 자동으로 다시 시작합니다.</li>
+        <li>어두운 곳에서는 카메라 화면 오른쪽 위 <b>플래시</b>를 눌러 켜세요. 켜 두면 다음에도 자동으로 켜집니다(지원하는 기기만 버튼이 보입니다).</li>
+        <li>플래시가 약에 비쳐 하얗게 번쩍이면 오히려 부정확할 수 있으니, 그럴 땐 끄고 주변 조명을 밝혀 주세요.</li>
+      </ul>
+    </div>
+    <div class="card">
       <h2>화면이 예전 그대로일 때</h2>
       <ul>
-        <li>맨 위 제목 옆 버전이 <b>v4.1</b>이 아니면 예전 화면이 저장된 것입니다.</li>
+        <li>맨 위 제목 옆 버전이 <b>v4.2</b>이 아니면 예전 화면이 저장된 것입니다.</li>
         <li>브라우저에서 <b>새로고침</b>하거나, 홈 화면 앱이면 <b>앱을 완전히 닫았다가</b> 다시 여세요. 업데이트 후 최대 10분 정도 걸릴 수 있습니다.</li>
       </ul>
     </div>
@@ -449,6 +475,12 @@
   <button data-pg="pgHelp"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.4"/><circle cx="12" cy="17" r=".6"/></svg>사용법</button>
 </nav>
 <div class="toast" id="toast"></div>
+<div class="update-bar" id="updateBar" role="status">
+  <div class="u-txt"><b id="uTitle">새 버전이 있습니다</b><small id="uNote"></small></div>
+  <button class="primary" id="uBtn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg><span>업데이트</span></button>
+  <button class="u-x" id="uLater" aria-label="나중에">✕</button>
+  <div class="u-prog"><i id="uProg"></i></div>
+</div>
 <div class="scan" id="scan">
   <video id="scanVideo" playsinline muted></video>
   <div class="frame"></div>
@@ -478,7 +510,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=4.1');
+  engine=new Worker('engine.js?v=4.2');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -523,18 +555,37 @@ async function stepCapture(){
       stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
       video.srcObject=stream;
       setFocusMode('continuous');                    // 기본: 계속 자동 초점
+      setupFlash();                                  // 플래시 지원 여부 확인 + 저장된 설정 적용
     }
     if(my!==capSeq){ if(stream&&!live){stream.getTracks().forEach(t=>t.stop());stream=null} return; } // 그 사이 사진을 불러왔으면 카메라를 끄고 끝냄
     await video.play().catch(()=>{});
     if(my!==capSeq) return;
     video.classList.remove('hidden');
     captureButtons(true);
+    $('flashBtn').classList.toggle('hidden',!(camTrack()&&camTrack().getCapabilities&&camTrack().getCapabilities().torch));
     if(liveOn) startLive(); else showPlainCamera();
   }catch(e){
     if(my!==capSeq) return;
     guide.innerHTML='사진을 찍거나 불러오세요<small>이 브라우저에서는 실시간 카메라를 쓸 수 없어 사진 촬영 방식으로 진행합니다</small>';
   }
 }
+/* ---------- 플래시(토치) ----------
+   켜 두면 기억해서 다음에 카메라를 열 때도 자동으로 켬 */
+let flashOn=localStorage.getItem('pc.flash')==='1';
+function setupFlash(){
+  const t=stream&&stream.getVideoTracks()[0], b=$('flashBtn');
+  const ok=!!(t&&t.getCapabilities&&t.getCapabilities().torch);
+  b.classList.toggle('hidden',!ok);
+  if(ok&&flashOn) applyFlash(true);
+  renderFlash();
+}
+function applyFlash(on){
+  const t=stream&&stream.getVideoTracks()[0]; if(!t) return;
+  t.applyConstraints({advanced:[{torch:on}]}).catch(()=>toast('플래시를 켤 수 없습니다'));
+}
+function renderFlash(){ const b=$('flashBtn'); b.classList.toggle('on',flashOn); b.setAttribute('aria-pressed',flashOn); b.querySelector('span').textContent=flashOn?'플래시 ON':'플래시'; }
+$('flashBtn').onclick=e=>{ e.stopPropagation(); flashOn=!flashOn; localStorage.setItem('pc.flash',flashOn?'1':'0'); applyFlash(flashOn); renderFlash(); };
+
 function captureButtons(camOk){
   actions.innerHTML='';
   if(camOk){ const t=btn(liveOn?'실시간 ON':'실시간 OFF','ghost toggle'+(liveOn?' on':''),toggleLive,'bolt'); t.setAttribute('aria-pressed',liveOn); }
@@ -550,7 +601,7 @@ function showPlainCamera(){
   view.classList.add('hidden'); video.classList.remove('hidden'); badge.style.display='none';
   guide.innerHTML='약을 펼쳐 놓고 촬영하세요<small>화면을 터치하면 초점을 맞춥니다 · 찍으면 자동으로 셉니다</small>';
 }
-function stopCam(){ stopLive(); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden') }
+function stopCam(){ stopLive(); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden'); $('flashBtn').classList.add('hidden') }
 
 /* ---------- 실시간(라이브) 계수 ----------
    카메라 영상은 그대로 매끄럽게 보여주고, 그 위 투명 캔버스(ovl)에 결과 표시만 덧그림.
@@ -854,6 +905,38 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
   if(b.dataset.pg==='pgInv') renderInv();
   window.scrollTo(0,0);
 });
+
+/* ---------- 업데이트 확인 ----------
+   GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
+const APP_VERSION='4.2';
+const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
+let latest=null;
+async function checkUpdate(){
+  try{
+    const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+    const v=await r.json(); latest=v;
+    if(verNum(v.version)>verNum(APP_VERSION)&&sessionStorage.getItem('pc.skip')!==v.version){
+      $('uTitle').textContent=`새 버전 v${v.version}이 나왔습니다`;
+      $('uNote').textContent=v.notes||'눌러서 내려받고 업데이트하세요';
+      $('updateBar').classList.add('show');
+    }
+  }catch(e){}
+}
+$('uLater').onclick=()=>{ $('updateBar').classList.remove('show'); if(latest) sessionStorage.setItem('pc.skip',latest.version); };
+$('uBtn').onclick=async()=>{
+  const files=(latest&&latest.files)||['index.html','engine.js','manifest.webmanifest'];
+  const bar=$('updateBar'); bar.classList.add('busy'); $('uBtn').disabled=true; $('uBtn').querySelector('span').textContent='내려받는 중…';
+  let done=0;
+  for(const f of files){                                 // 새 파일을 캐시를 건너뛰고 내려받아 저장해 둠
+    try{ await fetch(f+(f.includes('?')?'&':'?')+'v='+latest.version,{cache:'reload'}); await fetch(f,{cache:'reload'}); }catch(e){}
+    done++; $('uProg').style.width=Math.round(done/files.length*100)+'%';
+  }
+  $('uBtn').querySelector('span').textContent='다시 시작…';
+  setTimeout(()=>{ const u=new URL(location.href); u.searchParams.set('v',latest.version); location.replace(u.toString()); },400);
+};
+checkUpdate();
+setInterval(checkUpdate,30*60*1000);                       // 켜 둔 동안 30분마다
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(); });
 
 const goTab=pg=>document.querySelector(`nav.tabs button[data-pg=${pg}]`).click();
 /* ---------- 재고 관리 (병·PTP 등 포장 단위 + 낱알) ---------- */
