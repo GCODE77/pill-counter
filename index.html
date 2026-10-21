@@ -22,19 +22,23 @@
   header{display:flex;align-items:center;justify-content:space-between;gap:8px}
   h1{font-size:22px;margin:4px 0}
   .steps{display:flex;gap:6px;margin:10px 0}
-  .step{flex:1;text-align:center;padding:8px 4px;border-radius:10px;background:var(--panel);color:var(--muted);font-weight:700;font-size:15px;border:2px solid transparent}
+  .step{flex:1;text-align:center;padding:7px 2px;border-radius:10px;background:var(--panel);color:var(--muted);font-weight:700;font-size:13px;white-space:nowrap;border:2px solid transparent}
   .step.active{border-color:var(--primary);color:var(--primary)}
   .step.done{color:var(--ok)}
   .guide{background:var(--panel);border-left:6px solid var(--primary);padding:12px 14px;border-radius:10px;font-size:19px;font-weight:700;line-height:1.4;margin-bottom:10px}
   .guide small{display:block;font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}
   .stage{position:relative;flex:none;min-height:220px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
   video,canvas.view{max-width:100%;max-height:max(220px,calc(100dvh - 400px));display:block;touch-action:manipulation}
-  .count-badge{text-align:center;margin:0 0 10px;background:var(--primary);color:var(--primary-text);
-    border-radius:16px;padding:6px 22px;font-size:44px;font-weight:900;box-shadow:0 4px 18px rgba(0,0,0,.5);display:none;white-space:nowrap}
+  .count-badge{text-align:center;margin:0 0 8px;min-height:64px;background:var(--primary);color:var(--primary-text);
+    border-radius:16px;padding:4px 22px;font-size:40px;font-weight:900;box-shadow:0 4px 18px rgba(0,0,0,.5);display:none;white-space:nowrap}
   .count-badge .sub{font-size:17px;font-weight:700;margin-top:-4px}
   .count-badge span{font-size:22px;font-weight:800;margin-left:4px}
   .busy{position:absolute;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font-size:22px;font-weight:800}
-  .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .actions button{min-height:50px;font-size:16px;padding:10px 8px;border-radius:12px;white-space:nowrap}
+  .actions .toggle{color:var(--muted)} .actions .toggle.on{color:var(--primary);border-color:var(--primary)}
+  .count-badge .wait{font-size:20px;font-weight:800;margin:0}
+  canvas.view.live{width:auto;height:max(220px,calc(100dvh - 430px))}
   #pgCount .actions{position:sticky;bottom:calc(78px + env(safe-area-inset-bottom));z-index:10;background:var(--bg);padding:8px 0;margin-top:4px}
   button,.btn{appearance:none;border:0;border-radius:14px;font-size:19px;font-weight:800;padding:16px 18px;cursor:pointer;min-height:58px;flex:1;
     display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
@@ -140,7 +144,7 @@
 </head>
 <body>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v2.0</small></div></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1><small style="color:var(--muted);font-weight:700">v2.1</small></div></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -216,9 +220,9 @@
     <div class="card">
       <h2>⚡ 실시간 계수</h2>
       <ol>
-        <li>촬영 화면에서 <b>⚡ 실시간</b>을 누릅니다.</li>
+        <li>카메라를 켜면 <b>처음부터 실시간</b>으로 시작합니다. 끄고 싶으면 <b>⚡ 실시간 켜짐</b> 버튼을 눌러 끕니다(설정은 기억됩니다).</li>
         <li>카메라 화면에서 약 <b>한 알</b>을 터치하면, 비추는 동안 개수가 계속 바뀌며 표시됩니다.</li>
-        <li>숫자가 안정되면 <b>✅ 확정</b>을 누르세요. 고화질 사진으로 다시 정밀하게 세어 결과 화면으로 넘어갑니다.</li>
+        <li>숫자가 안정되면 <b>📷 촬영</b>을 누르세요. 고화질 사진으로 다시 정밀하게 세어 결과 화면으로 넘어갑니다.</li>
         <li>실시간 숫자는 빠른 미리보기용입니다. 최종 수량은 <b>확정 후 결과</b>를 기준으로 하세요.</li>
       </ol>
     </div>
@@ -285,7 +289,7 @@
     <div class="card">
       <h2>화면이 예전 그대로일 때</h2>
       <ul>
-        <li>맨 위 제목 옆 버전이 <b>v2.0</b>이 아니면 예전 화면이 저장된 것입니다.</li>
+        <li>맨 위 제목 옆 버전이 <b>v2.1</b>이 아니면 예전 화면이 저장된 것입니다.</li>
         <li>브라우저에서 <b>새로고침</b>하거나, 홈 화면 앱이면 <b>앱을 완전히 닫았다가</b> 다시 여세요. 업데이트 후 최대 10분 정도 걸릴 수 있습니다.</li>
       </ul>
     </div>
@@ -332,39 +336,54 @@ function setStep(n){
 }
 function btn(label,cls,fn){const b=document.createElement('button');b.className=cls;b.textContent=label;b.onclick=fn;actions.appendChild(b);return b}
 
+let liveOn=localStorage.getItem('pc.live')!=='0';   // 실시간 켜짐/꺼짐 (기본: 켜짐)
 async function stepCapture(){
   $('nameRow').style.display='none';
   stopLive();
   setStep(1); result=null; seed=null; manual=[];
   badge.style.display='none'; $('tune').style.display='none';
-  view.classList.add('hidden');
-  guide.innerHTML='약을 겹치지 않게 펼쳐 놓고 촬영하세요<small>화면을 눌러도 촬영됩니다 · 단색 배경, 직사광선·조명 반사가 없는 곳이 가장 정확합니다</small>';
-  actions.innerHTML='';
-  const shot=btn('📷 촬영','primary',capture);
-  btn('🖼 불러오기','secondary',()=>$('file').click());
+  view.classList.add('hidden'); view.classList.remove('live');
+  captureButtons(false);
   try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
-    video.srcObject=stream; video.classList.remove('hidden');
-    btn('⚡ 실시간','secondary',startLive);
+    if(!stream){
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+      video.srcObject=stream;
+    }
+    await video.play().catch(()=>{});
+    captureButtons(true);
+    if(liveOn) startLive(); else showPlainCamera();
   }catch(e){
-    shot.textContent='📷 촬영'; shot.onclick=()=>$('file').click();
     guide.innerHTML='아래 버튼으로 사진을 찍거나 불러오세요<small>이 브라우저에서는 실시간 카메라를 쓸 수 없어 사진 촬영 방식으로 진행합니다</small>';
   }
+}
+function captureButtons(camOk){
+  actions.innerHTML='';
+  if(camOk) btn(liveOn?'⚡ 실시간 켜짐':'⚡ 실시간 꺼짐','secondary toggle'+(liveOn?' on':''),toggleLive);
+  btn('🖼 불러오기','secondary',()=>$('file').click());
+  btn('📷 촬영','primary',()=>{ if(!camOk) return $('file').click(); if(live&&seed) confirmLive(); else capture(); });
+}
+function toggleLive(){
+  liveOn=!liveOn; localStorage.setItem('pc.live',liveOn?'1':'0');
+  captureButtons(true);
+  if(liveOn) startLive(); else { stopLive(); showPlainCamera(); }
+}
+function showPlainCamera(){
+  view.classList.add('hidden'); view.classList.remove('live'); video.classList.remove('hidden'); badge.style.display='none';
+  guide.innerHTML='약을 겹치지 않게 펼쳐 놓고 촬영하세요<small>화면을 눌러도 촬영됩니다 · 단색 배경, 반사가 없는 곳이 가장 정확합니다</small>';
 }
 function stopCam(){ stopLive(); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden') }
 
 /* ---------- 실시간(라이브) 계수 ---------- */
-// 카메라 영상을 작은 크기로 계속 세어서 보여주고, '확정'을 누르면 고화질로 다시 정밀 계수
+// 카메라 영상을 작은 크기로 계속 세어서 보여주고, '촬영'을 누르면 고화질로 다시 정밀 계수
 let live=null;
 const LIVE_SIDE=480;
 function startLive(){
-  if(!video.videoWidth) return;
+  if(!video.videoWidth){ setTimeout(()=>{ if(liveOn&&stream&&!live&&$('s1').classList.contains('active')) startLive() },200); return; }
   live={t:0}; seed=null; manual=[]; result=null;
-  video.classList.add('hidden'); view.classList.remove('hidden');
-  guide.innerHTML='⚡ 실시간 계수 중 — 화면에서 약 <u>한 알</u>을 터치하세요<small>숫자가 안정되면 <b>✅ 확정</b>을 누르세요. 고화질로 다시 정밀하게 셉니다</small>';
-  actions.innerHTML='';
-  btn('■ 끄기','secondary',stepCapture);
-  btn('✅ 확정','primary',confirmLive);
+  video.classList.add('hidden'); view.classList.remove('hidden'); view.classList.add('live');
+  guide.innerHTML='⚡ 실시간 — 화면에서 약 <u>한 알</u>을 터치하세요<small>숫자가 안정되면 <b>📷 촬영</b>을 누르세요. 고화질로 다시 정밀하게 셉니다</small>';
+  // 개수 칸을 미리 잡아 두어 화면이 밀리지 않게 함
+  badge.style.display='block'; badge.innerHTML='<span class="wait">👆 약 한 알을 터치</span>';
   liveTick();
 }
 function liveTick(){
@@ -382,7 +401,7 @@ function liveTick(){
         if(best) seed={x:Math.round(best.x),y:Math.round(best.y)};
         ctx.lineWidth=3;ctx.strokeStyle='#facc15';ctx.beginPath();ctx.arc(seed.x,seed.y,Math.max(10,result.r*0.9),0,7);ctx.stroke();
       }catch(e){}
-    }else badge.style.display='none';
+    }
   }
   live.t=setTimeout(liveTick,60);
 }
@@ -658,8 +677,8 @@ function draw(){
   ctx.putImageData(photo,0,0);
   // 인식 영역 살짝 강조
   const ov=ctx.getImageData(0,0,W,H), d=ov.data;
-  for(let i=0;i<W*H;i++) if(!result.mask[i]){d[i*4]*=0.45;d[i*4+1]*=0.45;d[i*4+2]*=0.45}
-  ctx.putImageData(ov,0,0);
+  if(!live){ for(let i=0;i<W*H;i++) if(!result.mask[i]){d[i*4]*=0.45;d[i*4+1]*=0.45;d[i*4+2]*=0.45}
+  ctx.putImageData(ov,0,0); }
   const r=Math.max(7,Math.min(20,result.r*0.45));
   let n=0, skipped=0;
   const skip=p=>{  // 세지 않은 반알·조각: 회색 X
@@ -769,7 +788,7 @@ function downloadRecord(r){
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x===b));
   ['pgCount','pgHistory','pgInv','pgHelp'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.pg));
-  if(b.dataset.pg==='pgCount'){ if(!result&&view.classList.contains('hidden')) stepCapture(); }
+  if(b.dataset.pg==='pgCount'){ if(!result) stepCapture(); }
   else stopCam();
   if(b.dataset.pg==='pgHistory') renderHistory();
   if(b.dataset.pg==='pgInv') renderInv();
