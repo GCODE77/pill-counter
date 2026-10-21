@@ -45,6 +45,10 @@ function count(){
   const sm=hist.map((_,i)=>{let v=0,c=0;for(let j=i-3;j<=i+3;j++)if(j>=0&&j<=120){v+=hist[j];c++}return v/c});
   let pk=0; for(let i=1;i<=25;i++) if(sm[i]>sm[pk]) pk=i;
   let th=Math.min(60,pk+8); for(let i=pk+1;i<=60;i++){ if(sm[i]<sm[th]) th=i; if(sm[i]>sm[th]*1.8 && i>th+3) break; }
+  // 경계값이 약 자체 색 퍼짐보다 지나치게 넓으면(반사·밝은 바닥까지 잡힘) 줄임
+  { const ds=[]; for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const x=seed.x+dx,y=seed.y+dy;if(x>=0&&y>=0&&x<W&&y<H)ds.push(dmap[y*W+x])}
+    ds.sort((a,b)=>a-b); const spread=ds[Math.floor(ds.length*0.8)]||4;
+    if(Math.hypot(A,B)<14) th=Math.min(th,Math.max(10,spread*2+6)); }   // 흰·회색 약만: 반사광과 색이 같아서 경계를 좁힘
   th=Math.max(th,10)*(T/20);
   let mask=new Uint8Array(N);
   for(let i=0;i<N;i++) if(dmap[i]<th) mask[i]=1;
@@ -108,13 +112,15 @@ function count(){
   const blobFeat=px=>{let clip=0,edge=0;for(const p of px){const j=p*4;if(pd[j]>245&&pd[j+1]>245&&pd[j+2]>245)clip++;
       const x=p%W;if(x==0||x==W-1||p<W||p>=N-W||!mask[p-1]||!mask[p+1]||!mask[p-W]||!mask[p+W])edge++}
     return {clip:clip/px.length,rough:edge*edge/(4*Math.PI*px.length)}};
-  const info=full.blobs.map((px,f)=>({px,f,shape:pca(px),...blobFeat(px),n:coresOf[f].reduce((s,k)=>s+coreK(blobs[k]),0)}));
+  const meanDE=px=>{let l=0,a=0,b=0;for(const p of px){l+=lab[p*3];a+=lab[p*3+1];b+=lab[p*3+2]}const n=px.length;return Math.hypot((l/n-L)*0.5,a/n-A,b/n-B)};
+  const info=full.blobs.map((px,f)=>({px,f,shape:pca(px),...blobFeat(px),dE:meanDE(px),n:coresOf[f].reduce((s,k)=>s+coreK(blobs[k]),0)}));
   // 기준 약 1알의 모양 = 터치한 약과 비슷한 '단독' 덩어리들의 중앙값
   const sf=full.lbl[refPix], sInfo=info[sf];
   const sArea=commonSize(info.filter(o=>o.n===1).map(o=>o.px.length),sInfo.px.length/Math.max(1,sInfo.n));
   const singles=info.filter(o=>o.n===1&&o.px.length>sArea*0.7&&o.px.length<sArea*1.4);
   const med=f=>{const v=singles.map(f).sort((a,b)=>a-b);return v[v.length>>1]};
   const Ap=singles.length>=3?med(o=>o.px.length):sArea;
+  const refDE=singles.length>=3?med(o=>o.dE):sInfo.dE, refRough=singles.length>=3?med(o=>o.rough):sInfo.rough, refClip=singles.length>=3?med(o=>o.clip):sInfo.clip;
   const Lp=singles.length>=3?med(o=>o.shape.len):sInfo.shape.len;
   const Wp=singles.length>=3?med(o=>o.shape.wid):sInfo.shape.wid;
   // 8) 덩어리마다 유형 판정 + 개수
@@ -123,8 +129,19 @@ function count(){
     const area=o.px.length, ratio=area/Ap, sh=o.shape;
     if(ratio<0.15||(ratio<0.3&&sh.wid<Wp*0.4)) return;     // 부스러기·노이즈 (세운 약은 작지만 둥글어서 통과)
     // 빛 반사: 기준 약보다 훨씬 하얗게 날아갔거나, 테두리가 약답지 않게 들쭉날쭉하면 버림
-    if(o.clip>Math.max(0.2,sInfo.clip+0.15)) return;
-    if(o.n<=1&&o.rough>Math.max(2.2,sInfo.rough*1.8)) return;
+    if(o.clip>Math.max(0.2,refClip+0.15)) return;
+    // 빛 반사·바닥 무늬: 기준 약과 색이 꽤 다르거나, 테두리가 약 무더기보다 훨씬 들쭉날쭉하면 세지 않음
+    const whitish=Math.hypot(A,B)<14;
+    if(whitish&&o.dE>Math.max(7,refDE*3+4)) return;
+    const good=coresOf[o.f].filter(c=>blobs[c].sub||(blobs[c].length>unit*0.6&&blobs[c].length<unit*1.6));
+    if(whitish&&o.rough>Math.max(2.4,refRough*2.2)&&good.length<ratio*0.6){
+      // 약 + 반사가 엉겨 붙은 덩어리(면적에 비해 1알 크기 중심부가 적음): 1알 크기 중심부만 약으로 셈, 반사 조각은 무시
+      // (보통 약 무더기는 면적만큼 중심부가 있어서 이 경로를 타지 않음)
+      stat.반사=(stat.반사||0)+1;
+      good.forEach(c=>{const q=kmeans(blobs[c],1)[0];pts.push({x:q.x,y:q.y,type:'붙음'});stat.붙음++});
+      return;
+    }
+    if(o.n<=1&&o.rough>Math.max(2.2,refRough*1.8)) return;
     let k=o.n, type;
     if(k<=1){
       if(ratio>1.15&&(sh.len>Lp*1.35||sh.wid>Wp*1.45)){ k=Math.max(2,Math.round(ratio-0.1)); type='겹침'; }

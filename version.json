@@ -1,5 +1,5 @@
 {
-  "version": "4.4",
-  "notes": "결과 되돌리기·처음으로, 골드 표시, 세련된 화면 마감",
+  "version": "4.5",
+  "notes": "흰 약 빛 반사 오인식 대폭 개선, 플래시 버튼 항상 표시",
   "files": ["index.html", "engine.js", "manifest.webmanifest"]
 }
