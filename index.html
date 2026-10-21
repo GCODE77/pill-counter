@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>필카운터</title>
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#06070b">
+<meta name="author" content="GLORY KIM">
+<meta name="copyright" content="© GLORY KIM. All rights reserved.">
+<meta name="description" content="필카운터 — 카메라로 같은 약을 자동으로 세는 앱">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="필카운터">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
@@ -288,11 +291,48 @@
   .update-bar .u-x{flex:none;min-height:34px;width:34px;padding:0;background:none;color:var(--muted);font-size:16px}
   .update-bar .u-prog{position:absolute;left:0;right:0;bottom:0;height:2px;background:transparent}
   .update-bar .u-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--g1),var(--g3));transition:width .2s}
+  /* v4.3 — 시작 화면·저작권·빈 화면·숫자 연출 */
+  .splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;
+    background:radial-gradient(600px 400px at 50% 40%,rgba(226,196,126,.18),transparent 70%),#06070b;transition:opacity .6s ease,visibility .6s}
+  .splash.out{opacity:0;visibility:hidden}
+  .splash .s-in{text-align:center;animation:sIn .8s cubic-bezier(.2,.8,.2,1) both}
+  .splash img{width:76px;height:76px;border-radius:20px;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 20px 50px rgba(0,0,0,.6),0 0 40px rgba(226,196,126,.2)}
+  .splash .s-name{margin-top:18px;font-size:26px;font-weight:700;letter-spacing:-.02em;color:#f4f1ea}
+  .splash .s-sub{margin-top:4px;font-size:11px;letter-spacing:.42em;color:var(--gold);font-weight:600}
+  .splash .s-line{width:36px;height:1px;margin:18px auto 12px;background:linear-gradient(90deg,transparent,var(--g2),transparent)}
+  .splash .s-copy{font-size:11px;letter-spacing:.24em;color:#8b8f99}
+  @keyframes sIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+  .copyright{position:fixed;left:0;right:0;bottom:calc(80px + env(safe-area-inset-bottom));text-align:center;font-size:10px;letter-spacing:.24em;
+    color:rgba(255,255,255,.22);pointer-events:none;z-index:1}
+  body[data-pg="pgCount"] .copyright{display:none}
+  .about{text-align:center;margin:18px 0 10px;padding:22px 14px;border-radius:20px;border:1px solid var(--hair);
+    background:radial-gradient(300px 140px at 50% 0,rgba(226,196,126,.10),transparent 70%),var(--glass)}
+  .about img{width:52px;height:52px;border-radius:14px;box-shadow:0 0 0 1px var(--hair2)}
+  .about .a-name{margin-top:10px;font-size:18px;font-weight:700}
+  .about .a-sub{font-size:10px;letter-spacing:.36em;color:var(--gold);font-weight:600;margin-top:2px}
+  .about .a-ver{margin-top:10px;font-size:12px;color:var(--muted)}
+  .about .a-copy{margin-top:4px;font-size:12px;color:#c9c3b4;letter-spacing:.02em}
+  .empty-state{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:34px 18px;border-radius:20px;border:1px dashed var(--hair2);background:var(--glass)}
+  .empty-state .ic{width:34px;height:34px;color:var(--gold);stroke-width:1.4;margin-bottom:4px}
+  .empty-state b{font-size:17px}
+  .empty-state small{color:var(--muted);font-size:14px;line-height:1.5}
+  .empty-state em{font-style:normal;color:var(--gold)}
+  .empty-state button{flex:none;margin-top:8px;padding:10px 18px}
+  .count-badge .num{font-weight:700;font-variant-numeric:tabular-nums}
 </style>
 </head>
-<body>
+<body data-pg="pgCount">
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="s-in">
+    <img src="icons/icon-192.png" alt="">
+    <div class="s-name">필카운터</div>
+    <div class="s-sub">PILL COUNTER</div>
+    <div class="s-line"></div>
+    <div class="s-copy">© GLORY KIM</div>
+  </div>
+</div>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.2</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.3</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -452,7 +492,7 @@
     <div class="card">
       <h2>화면이 예전 그대로일 때</h2>
       <ul>
-        <li>맨 위 제목 옆 버전이 <b>v4.2</b>이 아니면 예전 화면이 저장된 것입니다.</li>
+        <li>맨 위 제목 옆 버전이 <b>v4.3</b>이 아니면 예전 화면이 저장된 것입니다.</li>
         <li>브라우저에서 <b>새로고침</b>하거나, 홈 화면 앱이면 <b>앱을 완전히 닫았다가</b> 다시 여세요. 업데이트 후 최대 10분 정도 걸릴 수 있습니다.</li>
       </ul>
     </div>
@@ -465,9 +505,17 @@
       </ul>
     </div>
     <div class="hint" style="text-align:center;margin:8px 0 4px">※ 자동 계수는 보조 도구입니다. 조제·투약 전 최종 수량은 반드시 확인하세요.</div>
+    <div class="about">
+      <img src="icons/icon-192.png" alt="">
+      <div class="a-name">필카운터</div>
+      <div class="a-sub">PILL COUNTER</div>
+      <div class="a-ver" id="aboutVer"></div>
+      <div class="a-copy">© <span id="copyYear"></span> GLORY KIM. All rights reserved.</div>
+    </div>
   </section>
 </div>
 
+<footer class="copyright">© GLORY KIM</footer>
 <nav class="tabs">
   <button class="on" data-pg="pgCount"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.5"/></svg>계수</button>
   <button data-pg="pgHistory"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>기록</button>
@@ -510,7 +558,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=4.2');
+  engine=new Worker('engine.js?v=4.3');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -695,12 +743,13 @@ function loadSource(src,w,h,normSeed){
   stopCam(); view.classList.remove('hidden');
   setStep(2); badge.style.display='none'; actions.innerHTML=''; btn('다시 촬영','ghost',stepCapture,'redo');
   guide.innerHTML='자동으로 세는 중…<small>잠시만 기다려 주세요</small>';
-  manual=[]; result=null;
+  manual=[]; result=null; delete badge.dataset.final;
   if(normSeed){ seed={x:Math.round(normSeed.x*W),y:Math.round(normSeed.y*H)}; run(false); }
   else { seed=null; run(true); }
 }
 
 function stepPick(){
+  delete badge.dataset.final;
   $('nameRow').style.display='none';
   setStep(2); result=null; ctx.putImageData(photo,0,0); badge.style.display='none'; $('tune').style.display='none';
   guide.innerHTML='셀 약 <b>한 알</b>을 터치하세요<small>그 약과 같은 모양·크기·색만 셉니다</small>';
@@ -784,6 +833,12 @@ const tolLabel=()=>{const v=tol.value-20;return v==0?'자동':(v>0?'+':'')+v};
 $('tolVal').textContent=tolLabel();
 
 /* ---------- 그리기 ---------- */
+function countUp(el,to){
+  const t0=performance.now(), d=Math.min(900,300+to*4);
+  const step=t=>{const k=Math.min(1,(t-t0)/d), e=1-Math.pow(1-k,3); el.textContent=Math.round(to*e); if(k<1) requestAnimationFrame(step)};
+  requestAnimationFrame(step);
+  setTimeout(()=>{el.textContent=to},d+120);               // 화면이 가려져 연출이 멈춰도 최종 숫자는 반드시 표시
+}
 function draw(){
   ctx.putImageData(photo,0,0);
   // 인식 영역 살짝 강조
@@ -809,7 +864,10 @@ function draw(){
   manual.forEach(p=>mark(p,'#ffffff'));
   renderStat();
   result.total=n; result.whole=n;
-  badge.innerHTML=`<div class="lbl">TOTAL · 총 개수</div>${n}<span>개</span>`+(skipped?`<div class="sub">반알·조각 ${skipped}개 제외</div>`:'');
+  const prevShown=badge.dataset.n!==undefined&&badge.dataset.final==='1'?+badge.dataset.n:null;
+  badge.innerHTML=`<div class="lbl">TOTAL · 총 개수</div><b class="num">${prevShown===null?0:n}</b><span>개</span>`+(skipped?`<div class="sub">반알·조각 ${skipped}개 제외</div>`:'');
+  badge.dataset.n=n; badge.dataset.final='1';
+  if(prevShown===null) countUp(badge.querySelector('.num'),n);   // 처음 결과가 나올 때만 숫자가 올라가는 연출
   badge.style.display='block';
 }
 
@@ -859,7 +917,7 @@ function renderHistory(){
       <img src="${r.thumb}" alt="">
       <div class="meta"><div class="nm">${esc(r.name||'단일 분석')}</div><div class="dt">${fmt(r.date)}</div></div>
       <div class="cnt">${r.count}<small>개</small></div>
-    </li>`).join(''):`<div class="empty">${recs.length?'검색 결과가 없습니다':'아직 저장된 기록이 없습니다.<br>계수 후 <b>✅ 기록 저장</b>을 누르세요.'}</div>`;
+    </li>`).join(''):(recs.length?'<div class="empty">검색 결과가 없습니다</div>':`<div class="empty-state">${ICON.list}<b>아직 저장된 기록이 없습니다</b><small>약을 세고 <em>기록 저장</em>을 누르면 이곳에 날짜별로 쌓입니다</small><button class="primary" onclick="goTab('pgCount')">${ICON.cam}<span>지금 약 세기</span></button></div>`);
   $('drugList').innerHTML=[...new Set(recs.map(r=>r.name).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join('');
 }
 $('q').oninput=renderHistory;
@@ -890,7 +948,8 @@ function downloadRecord(r){
     const w=img.width,h=img.height,c=document.createElement('canvas');c.width=w;c.height=h+70;const g=c.getContext('2d');
     g.drawImage(img,0,0);g.fillStyle='#facc15';g.fillRect(0,h,w,70);g.fillStyle='#111';g.textBaseline='middle';
     g.font='900 34px sans-serif';g.fillText(`${r.name||'단일 분석'} ${r.count}개`,16,h+35);
-    g.font='600 16px sans-serif';g.textAlign='right';g.fillText(fmt(r.date),w-16,h+35);
+    g.font='600 16px sans-serif';g.textAlign='right';g.fillText(fmt(r.date),w-16,h+24);
+    g.font='600 12px sans-serif';g.globalAlpha=.75;g.fillText('필카운터 · © GLORY KIM',w-16,h+50);g.globalAlpha=1;
     const a=document.createElement('a');a.download=`필카운터_${r.name||'분석'}_${r.count}개.png`;a.href=c.toDataURL('image/png');a.click();
   };img.src=r.image||r.thumb;
 }
@@ -898,6 +957,7 @@ function downloadRecord(r){
 /* ---------- 탭 이동 ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.body.dataset.pg=b.dataset.pg;
   ['pgCount','pgHistory','pgInv','pgHelp'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.pg));
   if(b.dataset.pg==='pgCount'){ if(!result) stepCapture(); }
   else { stopCam(); invPending=null; }   // 재고 낱알 세기 도중 다른 탭으로 가면 연결 해제
@@ -908,7 +968,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='4.2';
+const APP_VERSION='4.3';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){
@@ -962,7 +1022,7 @@ function renderInv(){
       <div class="inv-top"><div class="nm">${esc(d.name)}</div><div class="cnt">${c?fmtN(c.total):'-'}<small>정</small></div></div>
       <div class="inv-rows">${rows}</div>
       <div class="dt">${c?'조사일 '+fmtD(c.date):''}${c&&c.exp?` · <span class="${expSoon(c.exp)?'exp-warn':''}">유통기한 ${c.exp}${expSoon(c.exp)==='over'?' (지남)':expSoon(c.exp)?' (임박)':''}</span>`:''}</div>
-    </li>`}).join(''):`<div class="empty">${drugs.length?'검색 결과가 없습니다':'등록된 약품이 없습니다.<br><b>＋ 약품 등록</b>을 눌러 시작하세요.'}</div>`;
+    </li>`}).join(''):(drugs.length?'<div class="empty">검색 결과가 없습니다</div>':`<div class="empty-state">${ICON.box}<b>등록된 약품이 없습니다</b><small>약품을 등록하고 병·낱알 수량을 기록해 재고를 관리하세요</small><button class="primary" onclick="openInv(null)">${ICON.plus}<span>첫 약품 등록</span></button></div>`);
 }
 $('invQ').oninput=renderInv;
 $('invList').onclick=e=>{const li=e.target.closest('li');if(li)openInv(li.dataset.id)};
@@ -1181,6 +1241,9 @@ function scanToCountName(){
   });
 }
 
+$('aboutVer').textContent='버전 v'+APP_VERSION; $('copyYear').textContent=new Date().getFullYear();
+setTimeout(()=>$('splash').classList.add('out'),900);           // 시작 화면은 잠깐만
+setTimeout(()=>$('splash').remove(),1600);
 renderHistory();
 stepCapture();
 </script>

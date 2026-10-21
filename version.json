@@ -1,5 +1,5 @@
 {
-  "version": "4.2",
-  "notes": "플래시 켜기, 새 버전 알림·업데이트 추가",
+  "version": "4.3",
+  "notes": "시작 화면, 저작권 표기, 결과 숫자 연출, 빈 화면 안내 개선",
   "files": ["index.html", "engine.js", "manifest.webmanifest"]
 }

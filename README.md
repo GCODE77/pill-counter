@@ -1,5 +1,7 @@
 # 💊 필카운터 (Pill Counter)
 
+© GLORY KIM
+
 카메라로 비추거나 사진을 찍으면 **같은 모양·크기·색의 약을 자동으로 세어 주는** 웹앱입니다.
 설치 없이 핸드폰·노트북 브라우저에서 바로 쓰고, 홈 화면에 추가하면 앱처럼 쓸 수 있습니다.
 
@@ -109,7 +111,10 @@ GitHub Pages(`main` 브랜치 루트)로 배포됩니다. 새 버전을 낼 때�
 
 `main`에 푸시하면 1~2분 뒤 반영되고, 사용 중인 앱에 업데이트 알림이 뜹니다.
 
-## 라이선스
+## 저작권 · 라이선스
+
+© GLORY KIM. All rights reserved.
+
 
 - 바코드 인식: [ZXing](https://github.com/zxing-js/library) — Apache License 2.0 (`vendor/zxing-LICENSE`)
 - 글꼴: [Pretendard](https://github.com/orioncactus/pretendard) — SIL Open Font License 1.1 (CDN으로 불러옴)
