@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>약 계수기</title>
+<title>필카운터</title>
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="필카운터">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
   :root{
     --bg:#0f172a; --panel:#1e293b; --text:#f8fafc; --muted:#cbd5e1;
@@ -45,11 +51,51 @@
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-top:6px}
   .dot{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:4px}
   .hidden{display:none!important}
+  /* 상단 바 + 하단 탭 */
+  header img{width:34px;height:34px;border-radius:8px}
+  header .brand{display:flex;align-items:center;gap:10px}
+  .app{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;background:#0b1222;border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:20}
+  nav.tabs button{background:none;color:var(--muted);flex-direction:column;gap:2px;font-size:14px;min-height:62px;padding:6px}
+  nav.tabs button i{font-style:normal;font-size:24px}
+  nav.tabs button.on{color:var(--primary)}
+  section.page{display:flex;flex-direction:column;flex:1}
+  .name-row{display:none;margin-top:12px}
+  .name-row label{font-weight:700;font-size:16px;display:block;margin-bottom:6px}
+  input.text{width:100%;font-size:19px;padding:14px;border-radius:12px;border:2px solid var(--line);background:#0b1222;color:var(--text);font-family:inherit}
+  input.text:focus{outline:none;border-color:var(--primary)}
+  .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--ok);color:#052e16;font-weight:800;font-size:17px;padding:12px 20px;border-radius:12px;display:none;z-index:30;white-space:nowrap}
+  /* 기록 목록 */
+  .hist-head{margin:8px 0 10px}
+  .hist-sum{color:var(--muted);font-size:15px;margin-bottom:8px}
+  .hist{list-style:none;margin:0;padding:0;background:var(--panel);border-radius:14px;overflow:hidden}
+  .hist li{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--line);cursor:pointer}
+  .hist li:last-child{border-bottom:0}
+  .hist img{width:64px;height:64px;object-fit:cover;border-radius:8px;background:#000;flex:none}
+  .hist .meta{flex:1;min-width:0}
+  .hist .nm{font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hist .dt{font-size:14px;color:var(--muted);margin-top:4px}
+  .hist .cnt{font-size:30px;font-weight:900;color:var(--primary);white-space:nowrap}
+  .hist .cnt small{font-size:16px;color:var(--text);margin-left:2px}
+  .empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:17px;line-height:1.6}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:40;padding:14px}
+  .modal .box{background:var(--panel);border-radius:16px;max-width:700px;width:100%;max-height:92vh;overflow:auto;padding:14px}
+  .modal img{width:100%;border-radius:10px;display:block}
+  .modal h2{margin:4px 0 8px;font-size:22px}
+  /* 사용법 */
+  .help h2{font-size:21px;margin:0 0 8px;color:var(--primary)}
+  .help ol,.help ul{margin:0;padding-left:22px;font-size:17px;line-height:1.7}
+  .help .card{background:var(--panel);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+  .help table{width:100%;border-collapse:collapse;font-size:16px}
+  .help td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 </style>
 </head>
 <body>
 <div class="app">
-  <header><h1>💊 약 계수기</h1></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><h1>필카운터</h1></div></header>
+
+  <!-- ===== 계수 화면 ===== -->
+  <section class="page" id="pgCount">
 
   <div class="steps">
     <div class="step" id="s1">① 촬영</div>
@@ -74,9 +120,91 @@
     <div class="warn" id="warn"></div>
   </div>
 
+  <div class="name-row" id="nameRow">
+    <label for="drugName">약 이름 (선택)</label>
+    <input class="text" id="drugName" placeholder="예) 타이레놀 500mg" list="drugList" autocomplete="off">
+    <datalist id="drugList"></datalist>
+  </div>
   <div class="actions" id="actions"></div>
   <input type="file" id="file" accept="image/*" capture="environment">
+  </section>
+
+  <!-- ===== 기록 화면 ===== -->
+  <section class="page hidden" id="pgHistory">
+    <div class="hist-head"><input class="text" id="q" placeholder="🔍 약 이름으로 검색"></div>
+    <div class="hist-sum" id="histSum"></div>
+    <ul class="hist" id="histList"></ul>
+  </section>
+
+  <!-- ===== 사용법 화면 ===== -->
+  <section class="page hidden help" id="pgHelp">
+    <div class="card">
+      <h2>필카운터란?</h2>
+      <div style="font-size:17px;line-height:1.7">사진 한 장으로 같은 약이 <b>몇 알</b>인지 자동으로 세어 주는 앱입니다. 터치한 약과 <b>색·모양·크기가 같은 약만</b> 셉니다.</div>
+    </div>
+    <div class="card">
+      <h2>① 촬영</h2>
+      <ol>
+        <li>약을 <b>단색 배경</b> 위에 최대한 겹치지 않게 펼칩니다.</li>
+        <li>휴대폰을 약 <b>바로 위에서 수평</b>으로 들고, 약이 화면에 가득 차게 맞춥니다.</li>
+        <li><b>📷 촬영하기</b>를 누릅니다. 이미 찍은 사진은 <b>🖼 사진 불러오기</b>로 가져옵니다.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>② 기준 약 선택</h2>
+      <ol>
+        <li>셀 약 중 <b>다른 약과 떨어져 있는 한 알</b>을 손가락으로 터치합니다.</li>
+        <li>바로 개수를 세기 시작합니다.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>③ 결과 확인 · 저장</h2>
+      <ol>
+        <li>맨 위 <b>노란 숫자</b>가 총 개수입니다.</li>
+        <li>표시가 <b>빠진 약</b>은 터치하면 추가(흰 표시), <b>잘못 잡힌 표시</b>는 터치하면 삭제됩니다.</li>
+        <li>약 이름을 적고(선택) <b>✅ 기록 저장</b>을 누르면 <b>기록</b> 탭에 남습니다.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>표시 색의 뜻</h2>
+      <table>
+        <tr><td><i class="dot" style="background:#22c55e"></i>단독</td><td>떨어져 있는 약 1알</td></tr>
+        <tr><td><i class="dot" style="background:#e879f9"></i>붙음</td><td>맞닿은 약 — 한 알씩 나눠서 셈</td></tr>
+        <tr><td><i class="dot" style="background:#f43f5e"></i>겹침</td><td>다른 약에 가려진 약 — <b>추정값, 꼭 확인</b></td></tr>
+        <tr><td><i class="dot" style="background:#38bdf8"></i>눕힘</td><td>옆으로 누운 약</td></tr>
+        <tr><td><i class="dot" style="background:#a78bfa"></i>세움</td><td>세로로 선 약 — <b>추정값, 꼭 확인</b></td></tr>
+        <tr><td><i class="dot" style="background:#fff"></i>직접 추가</td><td>사용자가 터치로 추가한 약</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h2>개수가 안 맞을 때</h2>
+      <ul>
+        <li><b>적게 나오면</b> → 색 허용 범위를 <b>오른쪽</b>으로</li>
+        <li><b>배경까지 잡히면</b> → 색 허용 범위를 <b>왼쪽</b>으로</li>
+        <li>흰 약은 <b>어두운 배경</b>, 어두운 약은 <b>밝은 배경</b>에서 찍으세요.</li>
+        <li>약과 색이 비슷한 물건(종이, 포장지)은 치워 주세요.</li>
+        <li>약이 많이 겹치면 펼친 뒤 다시 찍는 것이 가장 정확합니다.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>기록 · 홈 화면 추가</h2>
+      <ul>
+        <li><b>기록</b> 탭: 저장한 결과를 최신순으로 보고, 약 이름으로 검색합니다. 항목을 누르면 사진 확대·이미지 저장·삭제가 됩니다.</li>
+        <li>기록은 <b>이 기기의 브라우저에만</b> 저장됩니다(서버로 전송되지 않음). 브라우저 데이터를 지우면 함께 지워집니다.</li>
+        <li><b>앱처럼 쓰기</b>: 아이폰 Safari → 공유 → <b>홈 화면에 추가</b> / 안드로이드 Chrome → ⋮ 메뉴 → <b>홈 화면에 추가</b></li>
+      </ul>
+    </div>
+    <div class="hint" style="text-align:center;margin:8px 0 4px">※ 자동 계수는 보조 도구입니다. 조제·투약 전 최종 수량은 반드시 확인하세요.</div>
+  </section>
 </div>
+
+<nav class="tabs">
+  <button class="on" data-pg="pgCount"><i>📷</i>계수</button>
+  <button data-pg="pgHistory"><i>📋</i>기록</button>
+  <button data-pg="pgHelp"><i>❓</i>사용법</button>
+</nav>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -92,6 +220,7 @@ function setStep(n){
 function btn(label,cls,fn){const b=document.createElement('button');b.className=cls;b.textContent=label;b.onclick=fn;actions.appendChild(b);return b}
 
 async function stepCapture(){
+  $('nameRow').style.display='none';
   setStep(1); result=null; seed=null; manual=[];
   badge.style.display='none'; $('tune').style.display='none';
   view.classList.add('hidden');
@@ -127,6 +256,7 @@ function loadSource(src,w,h){
 }
 
 function stepPick(){
+  $('nameRow').style.display='none';
   setStep(2); ctx.putImageData(photo,0,0); badge.style.display='none'; $('tune').style.display='none';
   guide.innerHTML='👆 셀 약 <u>한 개</u>를 손가락으로 터치하세요<small>터치한 약과 같은 모양·색상의 약만 셉니다</small>';
   actions.innerHTML=''; btn('↺ 다시 촬영','secondary',stepCapture);
@@ -138,7 +268,8 @@ function stepResult(){
   actions.innerHTML='';
   btn('↺ 다시 촬영','secondary',stepCapture);
   btn('🎯 기준 다시 선택','secondary',stepPick);
-  btn('💾 결과 저장','primary',save);
+  btn('✅ 기록 저장','primary',saveRecord);
+  $('nameRow').style.display='block';
 }
 
 /* ---------- 터치 처리 ---------- */
@@ -365,15 +496,87 @@ function renderStat(){
   $('warn').innerHTML=`⚠ 겹치거나 세워진 약 <b>${warn}개</b>는 추정값입니다. 빨간·보라 표시를 확인하거나, 약을 펼쳐 다시 찍으면 더 정확합니다.`;
 }
 
-function save(){
-  const c=document.createElement('canvas');c.width=W;c.height=H+70;const g=c.getContext('2d');
-  g.drawImage(view,0,0);g.fillStyle='#facc15';g.fillRect(0,H,W,70);
-  g.fillStyle='#111';g.font='900 38px sans-serif';g.textBaseline='middle';
-  g.fillText(`총 ${result.total}개`,20,H+35);
-  g.font='600 18px sans-serif';g.textAlign='right';g.fillText(new Date().toLocaleString('ko-KR'),W-20,H+35);
-  const a=document.createElement('a');a.download=`약계수_${result.total}개_${Date.now()}.png`;a.href=c.toDataURL('image/png');a.click();
+/* ---------- 기록 (이 기기 localStorage에 저장) ---------- */
+const KEY='pillcounter.records';
+const loadRecs=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return[]}};
+const storeRecs=r=>localStorage.setItem(KEY,JSON.stringify(r));
+function snapshot(maxSide,q){
+  const s=Math.min(1,maxSide/Math.max(W,H)),c=document.createElement('canvas');
+  c.width=Math.round(W*s);c.height=Math.round(H*s);c.getContext('2d').drawImage(view,0,0,c.width,c.height);
+  return c.toDataURL('image/jpeg',q);
+}
+function saveRecord(){
+  const st={};result.pts.forEach(p=>{if(!p.off)st[p.type]=(st[p.type]||0)+1});
+  if(manual.length) st['직접 추가']=manual.length;
+  const rec={id:Date.now(),name:$('drugName').value.trim(),count:result.total,stat:st,
+    date:new Date().toISOString(),thumb:snapshot(160,0.7),image:snapshot(720,0.72)};
+  const recs=loadRecs();recs.unshift(rec);
+  // 저장 공간이 부족하면 오래된 기록의 큰 사진부터 정리
+  for(;;){try{storeRecs(recs);break}catch(e){const old=[...recs].reverse().find(r=>r.image);if(!old){toast('저장 공간이 부족합니다');return}delete old.image}}
+  toast(`✅ ${rec.name||'단일 분석'} ${rec.count}개 저장됨`);
+  $('drugName').value='';
+  renderHistory();
+  stepCapture();
+}
+function toast(msg){const t=$('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2200)}
+const fmt=iso=>{const d=new Date(iso),z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}. ${z(d.getMonth()+1)}. ${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function renderHistory(){
+  const recs=loadRecs(), q=$('q').value.trim().toLowerCase();
+  const list=recs.filter(r=>!q||(r.name||'단일 분석').toLowerCase().includes(q));
+  $('histSum').textContent=recs.length?`총 ${list.length}건 · 합계 ${list.reduce((s,r)=>s+r.count,0).toLocaleString()}개`:'';
+  $('histList').innerHTML=list.length?list.map(r=>`
+    <li data-id="${r.id}">
+      <img src="${r.thumb}" alt="">
+      <div class="meta"><div class="nm">${esc(r.name||'단일 분석')}</div><div class="dt">${fmt(r.date)}</div></div>
+      <div class="cnt">${r.count}<small>개</small></div>
+    </li>`).join(''):`<div class="empty">${recs.length?'검색 결과가 없습니다':'아직 저장된 기록이 없습니다.<br>계수 후 <b>✅ 기록 저장</b>을 누르세요.'}</div>`;
+  $('drugList').innerHTML=[...new Set(recs.map(r=>r.name).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join('');
+}
+$('q').oninput=renderHistory;
+$('histList').onclick=e=>{const li=e.target.closest('li');if(li)openRecord(+li.dataset.id)};
+function openRecord(id){
+  const r=loadRecs().find(x=>x.id===id);if(!r)return;
+  const chips=Object.entries(r.stat||{}).map(([k,v])=>`<span class="chip">${esc(k)} <b>${v}</b></span>`).join('');
+  $('modalBox').innerHTML=`
+    <h2>${esc(r.name||'단일 분석')}</h2>
+    <div class="hint" style="margin:0 0 8px">${fmt(r.date)}</div>
+    <div class="count-badge" style="display:block">${r.count}<span>개</span></div>
+    <img src="${r.image||r.thumb}" alt="계수 결과 사진">
+    <div class="stat">${chips}</div>
+    <div class="actions">
+      <button class="secondary" id="mDel">🗑 삭제</button>
+      <button class="secondary" id="mDown">⬇ 이미지 저장</button>
+      <button class="primary" id="mClose">닫기</button>
+    </div>`;
+  $('modal').style.display='flex';
+  $('mClose').onclick=closeModal;
+  $('mDel').onclick=()=>{if(!confirm('이 기록을 삭제할까요?'))return;storeRecs(loadRecs().filter(x=>x.id!==id));closeModal();renderHistory();toast('삭제했습니다')};
+  $('mDown').onclick=()=>downloadRecord(r);
+}
+function closeModal(){$('modal').style.display='none'}
+$('modal').onclick=e=>{if(e.target.id==='modal')closeModal()};
+function downloadRecord(r){
+  const img=new Image();img.onload=()=>{
+    const w=img.width,h=img.height,c=document.createElement('canvas');c.width=w;c.height=h+70;const g=c.getContext('2d');
+    g.drawImage(img,0,0);g.fillStyle='#facc15';g.fillRect(0,h,w,70);g.fillStyle='#111';g.textBaseline='middle';
+    g.font='900 34px sans-serif';g.fillText(`${r.name||'단일 분석'} ${r.count}개`,16,h+35);
+    g.font='600 16px sans-serif';g.textAlign='right';g.fillText(fmt(r.date),w-16,h+35);
+    const a=document.createElement('a');a.download=`필카운터_${r.name||'분석'}_${r.count}개.png`;a.href=c.toDataURL('image/png');a.click();
+  };img.src=r.image||r.thumb;
 }
 
+/* ---------- 탭 이동 ---------- */
+document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  ['pgCount','pgHistory','pgHelp'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.pg));
+  if(b.dataset.pg==='pgCount'){ if(!result&&view.classList.contains('hidden')) stepCapture(); }
+  else stopCam();
+  if(b.dataset.pg==='pgHistory') renderHistory();
+  window.scrollTo(0,0);
+});
+
+renderHistory();
 stepCapture();
 </script>
 </body>
