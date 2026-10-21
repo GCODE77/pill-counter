@@ -23,7 +23,7 @@
   .guide small{display:block;font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}
   .stage{position:relative;flex:1;min-height:300px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
   video,canvas.view{max-width:100%;max-height:62vh;display:block;touch-action:manipulation}
-  .count-badge{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--primary);color:var(--primary-text);
+  .count-badge{text-align:center;margin:0 0 10px;background:var(--primary);color:var(--primary-text);
     border-radius:16px;padding:6px 22px;font-size:44px;font-weight:900;box-shadow:0 4px 18px rgba(0,0,0,.5);display:none;white-space:nowrap}
   .count-badge span{font-size:22px;font-weight:800;margin-left:4px}
   .busy{position:absolute;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;font-size:22px;font-weight:800}
@@ -38,6 +38,10 @@
   .tune label{display:flex;justify-content:space-between;font-weight:700;font-size:16px}
   .tune input[type=range]{width:100%;height:34px;accent-color:var(--primary)}
   .hint{color:var(--muted);font-size:14px;margin-top:6px}
+  .stat{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .chip{background:#0f172a;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:16px;font-weight:700}
+  .chip b{color:var(--primary);margin-left:2px}
+  .warn{display:none;margin-top:10px;background:#3f1d24;border:1px solid #f43f5e;color:#fecdd3;border-radius:10px;padding:10px 12px;font-size:15px;font-weight:600}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-top:6px}
   .dot{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:4px}
   .hidden{display:none!important}
@@ -55,10 +59,10 @@
 
   <div class="guide" id="guide"></div>
 
+  <div class="count-badge" id="badge"></div>
   <div class="stage" id="stage">
     <video id="video" playsinline muted autoplay class="hidden"></video>
     <canvas id="view" class="view hidden"></canvas>
-    <div class="count-badge" id="badge"></div>
     <div class="busy" id="busy">세는 중…</div>
   </div>
 
@@ -66,11 +70,8 @@
     <label><span>색 허용 범위 (자동 보정)</span><span id="tolVal"></span></label>
     <input type="range" id="tol" min="10" max="30" value="20">
     <div class="hint">개수가 적게 나오면 → 오른쪽 / 배경까지 잡히면 → 왼쪽</div>
-    <div class="legend">
-      <span><i class="dot" style="background:#22c55e"></i>1개</span>
-      <span><i class="dot" style="background:#e879f9"></i>붙어있는 약(추정)</span>
-      <span><i class="dot" style="background:#38bdf8"></i>직접 추가</span>
-    </div>
+    <div class="stat" id="stat"></div>
+    <div class="warn" id="warn"></div>
   </div>
 
   <div class="actions" id="actions"></div>
@@ -215,14 +216,68 @@ function count(){
   let unit=blobs[ref].length;
   const sim=blobs.map(b=>b.length).filter(a=>a>unit*0.6&&a<unit*1.5).sort((a,b)=>a-b);
   if(sim.length>=3) unit=sim[sim.length>>1];
-  // 7) core마다 개수 = 면적/기준 면적 (끝끼리 붙어 core가 이어진 경우 대비)
-  const pts=[];
-  blobs.forEach(px=>{
-    const ratio=px.length/unit; if(ratio<0.35) return;
-    const k=ratio<1.7?1:Math.round(ratio-0.15);
-    kmeans(px,k).forEach(c=>pts.push({x:c.x,y:c.y,merged:k>1}));
+  // 7) 약 덩어리(전체 모양) 단위로 분석
+  const full=label(mask);
+  const coresOf=full.blobs.map(()=>[]);
+  blobs.forEach((px,k)=>coresOf[full.lbl[px[0]]].push(k));
+  const coreK=px=>{const r=px.length/unit;return r<0.35?0:r<1.7?1:Math.round(r-0.15)};
+  const info=full.blobs.map((px,f)=>({px,f,shape:pca(px),n:coresOf[f].reduce((s,k)=>s+coreK(blobs[k]),0)}));
+  // 기준 약 1알의 모양 = 터치한 약과 비슷한 '단독' 덩어리들의 중앙값
+  const sf=full.lbl[blobs[ref][0]], sInfo=info[sf], sArea=sInfo.px.length/Math.max(1,sInfo.n);
+  const singles=info.filter(o=>o.n===1&&o.px.length>sArea*0.6&&o.px.length<sArea*1.5);
+  const med=f=>{const v=singles.map(f).sort((a,b)=>a-b);return v[v.length>>1]};
+  const Ap=singles.length>=3?med(o=>o.px.length):sArea;
+  const Lp=singles.length>=3?med(o=>o.shape.len):sInfo.shape.len;
+  const Wp=singles.length>=3?med(o=>o.shape.wid):sInfo.shape.wid;
+  // 8) 덩어리마다 유형 판정 + 개수
+  const pts=[], stat={단독:0,붙음:0,겹침:0,눕힘:0,세움:0};
+  info.forEach(o=>{
+    const area=o.px.length, ratio=area/Ap, sh=o.shape;
+    if(ratio<0.15||(ratio<0.3&&sh.wid<Wp*0.4)) return;     // 부스러기·노이즈 (세운 약은 작지만 둥글어서 통과)
+    let k=o.n, type;
+    if(k<=1){
+      if(ratio>1.15&&(sh.len>Lp*1.35||sh.wid>Wp*1.45)){ k=Math.max(2,Math.round(ratio-0.1)); type='겹침'; }
+      else{
+        k=1;
+        if(ratio<0.8&&sh.len<Lp*0.75) type='세움';   // 세로로 세워진 약: 길이가 짧게 보임
+        else if(ratio<0.8) type='눕힘';                        // 옆으로 누운 약: 길이는 같고 폭이 좁음
+        else type='단독';
+      }
+    }else{
+      // 붙은 무더기: 약 1알마다 중심부 크기로 판정 — 일부가 가려져 중심부가 작으면 '겹침'
+      const cs=coresOf[o.f].filter(c=>coreK(blobs[c])>0);
+      const blobOverlap=area/k<Ap*0.85&&k<=4;   // 작은 무더기인데 1알당 면적이 줄었으면 서로 가린 것
+      cs.forEach(c=>{
+        const kc=coreK(blobs[c]), cr=blobs[c].length/unit;
+        const t=(kc===1&&cr<0.6)||blobOverlap?'겹침':'붙음';
+        kmeans(blobs[c],kc).forEach(p=>{pts.push({x:p.x,y:p.y,type:t});stat[t]++});
+      });
+      // 면적으로 보면 더 있어야 하는 경우 = 아래에 완전히 깔린 약 → 빈 자리에 '겹침'으로 추가
+      const extra=Math.round(ratio-0.2)-k;
+      if(extra>0){
+        const have=pts.slice(-k), cand=kmeans(o.px,k+extra);
+        cand.map(c=>({c,d:Math.min(...have.map(h=>Math.hypot(h.x-c.x,h.y-c.y)))}))
+          .sort((a,b)=>b.d-a.d).slice(0,extra)
+          .forEach(({c})=>{pts.push({x:c.x,y:c.y,type:'겹침'});stat.겹침++});
+      }
+      return;
+    }
+    stat[type]+=k;
+    const centers=kmeans(o.px,k);
+    centers.forEach(c=>pts.push({x:c.x,y:c.y,type}));
   });
-  return {pts,r:r0*1.6,mask};
+  return {pts,stat,r:r0*1.6,mask};
+}
+
+function pca(px){
+  // 덩어리의 길이·폭을 방향과 무관하게 계산 (주성분 분석)
+  let sx=0,sy=0,n=px.length;
+  for(const p of px){sx+=p%W;sy+=(p/W)|0}
+  const mx=sx/n,my=sy/n;let xx=0,yy=0,xy=0;
+  for(const p of px){const dx=p%W-mx,dy=((p/W)|0)-my;xx+=dx*dx;yy+=dy*dy;xy+=dx*dy}
+  xx/=n;yy/=n;xy/=n;
+  const t=(xx+yy)/2,d=Math.sqrt(((xx-yy)/2)**2+xy*xy);
+  return {len:4*Math.sqrt(t+d),wid:4*Math.sqrt(Math.max(0,t-d))};
 }
 
 function label(m){
@@ -291,10 +346,23 @@ function draw(){
     ctx.fillStyle='#000';ctx.font=`900 ${Math.round(r*(n>99?0.9:1.1))}px sans-serif`;
     ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(n,p.x,p.y+1);
   };
-  result.pts.filter(p=>!p.off).forEach(p=>mark(p,p.merged?'#e879f9':'#22c55e'));
-  manual.forEach(p=>mark(p,'#38bdf8'));
+  result.pts.filter(p=>!p.off).forEach(p=>mark(p,TYPE_COLOR[p.type]));
+  manual.forEach(p=>mark(p,'#ffffff'));
+  renderStat();
   badge.innerHTML=`${n}<span>개</span>`; badge.style.display='block';
   result.total=n;
+}
+
+const TYPE_COLOR={단독:'#22c55e',붙음:'#e879f9',겹침:'#f43f5e',눕힘:'#38bdf8',세움:'#a78bfa'};
+function renderStat(){
+  const st={단독:0,붙음:0,겹침:0,눕힘:0,세움:0};
+  result.pts.forEach(p=>{if(!p.off)st[p.type]++});
+  const chips=Object.entries(st).filter(([,v])=>v).map(([k,v])=>`<span class="chip"><i class="dot" style="background:${TYPE_COLOR[k]}"></i>${k} <b>${v}</b></span>`);
+  if(manual.length) chips.push(`<span class="chip"><i class="dot" style="background:#fff"></i>직접 추가 <b>${manual.length}</b></span>`);
+  $('stat').innerHTML=chips.join('');
+  const warn=st.겹침+st.세움;
+  $('warn').style.display=warn?'block':'none';
+  $('warn').innerHTML=`⚠ 겹치거나 세워진 약 <b>${warn}개</b>는 추정값입니다. 빨간·보라 표시를 확인하거나, 약을 펼쳐 다시 찍으면 더 정확합니다.`;
 }
 
 function save(){
