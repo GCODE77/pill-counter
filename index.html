@@ -381,7 +381,7 @@
   </div>
 </div>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.8</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.9</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -498,6 +498,7 @@
       <table>
         <tr><td><i class="dot" style="background:#e7cd8c"></i>단독</td><td>떨어져 있는 약 1알</td></tr>
         <tr><td><i class="dot" style="background:#b9a4f5"></i>붙음</td><td>맞닿은 약 — 한 알씩 나눠서 셈</td></tr>
+        <tr><td><i class="dot" style="background:#7dd3fc"></i>세움</td><td>세워진 약(옆면이 보이는 약) — 지름과 두께로 판단해 셈</td></tr>
         <tr><td><i class="dot" style="background:#f08da0"></i>겹침</td><td>다른 약에 가려진 약 — <b>추정값, 꼭 확인</b></td></tr>
         <tr><td>회색 ×</td><td>반알·부서진 조각 — <b>세지 않음</b></td></tr>
         <tr><td>표시 없음</td><td>기준 약과 모양·크기·색이 다른 물건 — <b>세지 않음</b>. 빠졌다면 터치해서 추가</td></tr>
@@ -615,7 +616,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=4.8');
+  engine=new Worker('engine.js?v=4.9');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -658,7 +659,10 @@ async function stepCapture(){
   guide.innerHTML='카메라를 준비하고 있습니다…';
   try{
     if(!stream){
-      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+      const savedCam=localStorage.getItem('pc.cam');      // 예전에 찾은 '플래시 있는 후면 카메라'가 있으면 그것으로
+      const vc={width:{ideal:1920},height:{ideal:1080}};
+      if(savedCam) vc.deviceId={ideal:savedCam}; else vc.facingMode={ideal:'environment'};
+      stream=await navigator.mediaDevices.getUserMedia({video:vc,audio:false});
       video.srcObject=stream;
       setFocusMode('continuous');                    // 기본: 계속 자동 초점
       setupFlash();                                  // 플래시 지원 여부 확인 + 저장된 설정 적용
@@ -695,7 +699,42 @@ function applyFlash(on,quiet){
   }).catch(()=>{ if(on){ flashOn=false; localStorage.setItem('pc.flash','0'); renderFlash(); if(!quiet) toast('이 브라우저는 플래시를 지원하지 않습니다 · Chrome에서 열면 켤 수 있습니다'); } });
 }
 function renderFlash(){ const b=$('flashBtn'); b.classList.toggle('on',flashOn); b.setAttribute('aria-pressed',flashOn); b.querySelector('span').textContent=flashOn?'플래시 ON':'플래시'; }
-$('flashBtn').onclick=e=>{ e.stopPropagation(); flashOn=!flashOn; localStorage.setItem('pc.flash',flashOn?'1':'0'); applyFlash(flashOn); renderFlash(); };
+// 갤럭시처럼 후면 카메라가 여러 개면, 브라우저가 고른 카메라에 플래시가 없을 수 있음 → 플래시 달린 후면 카메라를 찾아 바꿈
+let findingTorch=false;
+async function switchToTorchCamera(){
+  if(findingTorch) return false; findingTorch=true;
+  try{
+    const cur=stream&&stream.getVideoTracks()[0], curId=cur&&cur.getSettings?cur.getSettings().deviceId:null;
+    const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'&&d.deviceId!==curId&&!/front|전면|user|selfie/i.test(d.label));
+    for(const d of devs){
+      let s2=null;
+      try{ s2=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:d.deviceId},width:{ideal:1920},height:{ideal:1080}},audio:false}); }catch(e){ continue; }
+      const t=s2.getVideoTracks()[0], caps=t.getCapabilities?t.getCapabilities():{};
+      if(caps.torch){
+        const wasLive=!!live; stopLive();
+        if(stream) stream.getTracks().forEach(x=>x.stop());
+        stream=s2; video.srcObject=stream; await video.play().catch(()=>{});
+        localStorage.setItem('pc.cam',d.deviceId); setFocusMode('continuous');
+        if(wasLive||liveOn) startLive();
+        return true;
+      }
+      s2.getTracks().forEach(x=>x.stop());
+    }
+    return false;
+  } finally { findingTorch=false; }
+}
+$('flashBtn').onclick=async e=>{
+  e.stopPropagation();
+  flashOn=!flashOn; localStorage.setItem('pc.flash',flashOn?'1':'0'); renderFlash();
+  const t=stream&&stream.getVideoTracks()[0];
+  if(flashOn&&t&&!(t.getCapabilities&&t.getCapabilities().torch)){
+    toast('플래시가 있는 카메라를 찾는 중…');
+    const ok=await switchToTorchCamera();
+    if(!ok){ flashOn=false; localStorage.setItem('pc.flash','0'); renderFlash();
+      toast('이 브라우저에서는 플래시를 켤 수 없습니다 · 삼성 인터넷은 지원하지 않아요. Chrome에서 열어 주세요'); return; }
+  }
+  applyFlash(flashOn);
+};
 
 function captureButtons(camOk){
   actions.innerHTML='';
@@ -1007,7 +1046,7 @@ function draw(){
 }
 
 // 표시 색: 기본은 샴페인 골드, 맞닿은 약은 라벤더, 가려진 약은 로즈, 직접 추가는 흰색
-const TYPE_COLOR={단독:'#e7cd8c',붙음:'#b9a4f5',겹침:'#f08da0',눕힘:'#e7cd8c',세움:'#e7cd8c',제외:'#6b7280',직접:'#ffffff'};
+const TYPE_COLOR={단독:'#e7cd8c',붙음:'#b9a4f5',겹침:'#f08da0',눕힘:'#e7cd8c',세움:'#7dd3fc',제외:'#6b7280',직접:'#ffffff'};
 function drawMarker(g,x,y,r,col,n,dpr=1){
   // 어두운 유리 원 + 얇은 색 테두리 + 색 숫자 → 사진을 가리지 않고 고급스럽게
   g.beginPath();g.arc(x,y,r,0,7);g.fillStyle='rgba(8,9,14,.78)';g.fill();
@@ -1112,7 +1151,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='4.8';
+const APP_VERSION='4.9';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){

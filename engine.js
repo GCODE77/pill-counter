@@ -133,7 +133,13 @@ function count(){
   const pts=[], stat={단독:0,붙음:0,겹침:0,눕힘:0,세움:0,제외:0};
   info.forEach(o=>{
     const area=o.px.length, ratio=area/Ap, sh=o.shape;
-    if(ratio<0.15||(ratio<0.3&&sh.wid<Wp*0.4)) return;     // 부스러기·노이즈 (세운 약은 작지만 둥글어서 통과)
+    // 세워진 약(옆면): 길이는 약 지름(장방형이면 약 폭)과 같고, 폭은 두께만큼 얇은 '좌우 대칭 직사각형'
+    const roundRef=Lp<Wp*1.3;
+    const standing=ratio>=0.12&&ratio<=0.75&&sh.wid>=Wp*0.16&&sh.wid<=Wp*0.62&&o.n<=1&&
+      ((sh.len>=Lp*0.8&&sh.len<=Lp*1.25)||(!roundRef&&sh.len>=Wp*0.8&&sh.len<=Wp*1.25))&&
+      o.dE<=Math.max(10,refDE*2.5+5)&&o.rough<=Math.max(1.6,refRough*1.6)&&minorAsym(o.px)<0.08;
+    if(standing){ stat.세움=(stat.세움||0)+1; const c=kmeans(o.px,1)[0]; pts.push({x:c.x,y:c.y,type:'세움'}); return; }
+    if(ratio<0.15||(ratio<0.3&&sh.wid<Wp*0.4)) return;     // 부스러기·노이즈
     // 빛 반사: 기준 약보다 훨씬 하얗게 날아갔거나, 테두리가 약답지 않게 들쭉날쭉하면 버림
     if(o.clip>Math.max(0.6,refClip+0.35)) return;      // 대부분이 하얗게 날아간 것만 반사로 봄(조명 따라 밝기 차이는 허용)
     // 빛 반사·바닥 무늬: 기준 약과 색이 꽤 다르거나, 테두리가 약 무더기보다 훨씬 들쭉날쭉하면 세지 않음
@@ -318,6 +324,14 @@ function autoSeedCore(){
   return {x:bp%W,y:(bp/W)|0};
 }
 
+function minorAsym(px){
+  // 짧은 축 방향으로 물체가 중심에서 양쪽으로 고르게 퍼져 있는지(직사각형 0, 반달 약 0.15)
+  let mx=0,my=0; for(const p of px){mx+=p%W;my+=(p/W)|0} mx/=px.length; my/=px.length;
+  let xx=0,yy=0,xy=0; for(const p of px){const dx=p%W-mx,dy=((p/W)|0)-my;xx+=dx*dx;yy+=dy*dy;xy+=dx*dy}
+  const a=0.5*Math.atan2(2*xy,xx-yy)+Math.PI/2, ux=Math.cos(a), uy=Math.sin(a);   // 짧은 축 방향
+  let lo=1e9,hi=-1e9; for(const p of px){const v=(p%W-mx)*ux+(((p/W)|0)-my)*uy; if(v<lo)lo=v; if(v>hi)hi=v}
+  return hi>lo?Math.abs(hi+lo)/(hi-lo):1;
+}
 function pca(px){
   // 덩어리의 길이·폭을 방향과 무관하게 계산 (주성분 분석)
   let sx=0,sy=0,n=px.length;
