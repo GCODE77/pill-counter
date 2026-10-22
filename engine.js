@@ -1,5 +1,5 @@
 /* 필카운터 계수 엔진 — 화면과 분리된 백그라운드 작업(Web Worker)에서 실행 */
-let W=0,H=0,lab=null,photo=null,seed=null,TOL=20;
+let W=0,H=0,lab=null,photo=null,seed=null,TOL=20,HINT=null;   // HINT: 손으로 테두리를 그려 지정한 기준 물체 {L,A,B,area}
 
 /* ---------- 색 변환 (sRGB → Lab) ---------- */
 function toLab(d){
@@ -25,6 +25,7 @@ function count(){
     const i=(y*W+x)*3; L+=lab[i];A+=lab[i+1];B+=lab[i+2];c++;
   }
   L/=c;A/=c;B/=c;
+  if(HINT){L=HINT.L;A=HINT.A;B=HINT.B;}               // 테두리로 지정한 물체의 평균색을 그대로 기준으로
   // 기준색 다듬기: 터치한 한 점이 아니라 '비슷한 색 전체'의 평균으로 (그림자·반사 쪽을 눌러도 결과가 같게)
   const L0=L,A0=A,B0=B;
   for(let it=0;it<5;it++){
@@ -64,6 +65,7 @@ function count(){
       if(touch) px.forEach(p=>mask[p]=1); }); }
   // 약 안의 글씨·각인·작은 반사 구멍(아주 작은 빈칸)만 메움 — 약 사이 틈은 그대로 둠
   mask=fillSmallHoles(mask,Math.max(12,N*0.00004));
+  mask=fillRoundHoles(mask);                         // 가운데 구멍이 있는 물체(와셔·링 부품·구멍 뚫린 정제)는 한 덩어리로
   // 4) 노이즈 제거: 가장자리의 반짝이는 점·먼지 제거
   mask=dilate(erode(mask));
   // 반사로 생긴 '약이 아닌 조각' 제거: 반사 픽셀이 대부분인 덩어리는 버림
@@ -116,7 +118,7 @@ function count(){
   const info=full.blobs.map((px,f)=>({px,f,shape:pca(px),...blobFeat(px),dE:meanDE(px),n:coresOf[f].reduce((s,k)=>s+coreK(blobs[k]),0)}));
   // 기준 약 1알의 모양 = 터치한 약과 비슷한 '단독' 덩어리들의 중앙값
   const sf=full.lbl[refPix], sInfo=info[sf];
-  const sArea=commonSize(info.filter(o=>o.n===1).map(o=>o.px.length),sInfo.px.length/Math.max(1,sInfo.n));
+  const sArea=HINT?HINT.area:commonSize(info.filter(o=>o.n===1).map(o=>o.px.length),sInfo.px.length/Math.max(1,sInfo.n));
   const singles=info.filter(o=>o.n===1&&o.px.length>sArea*0.7&&o.px.length<sArea*1.4);
   const med=f=>{const v=singles.map(f).sort((a,b)=>a-b);return v[v.length>>1]};
   const Ap=singles.length>=3?med(o=>o.px.length):sArea;
@@ -227,7 +229,9 @@ function autoSeedCore(){
   colors.forEach(col=>{
     let m=new Uint8Array(N);
     for(let i=0;i<N;i++){const dl=(lab[i*3]-col.L)*0.5,da=lab[i*3+1]-col.A,db=lab[i*3+2]-col.B;if(dl*dl+da*da+db*db<16*16)m[i]=1}
+                                        // 사진 가장자리를 많이 덮는 색 = 바닥
     m=erode(dilate(dilate(erode(m))));                 // 잡티 제거 + 글씨·반사 작은 구멍 메움
+    m=fillRoundHoles(m);
     const {blobs}=label(m), cand=[];
     blobs.forEach(px=>{
       if(px.length<Math.max(20,N*0.0003)||px.length>N*0.06) return;   // 너무 작은 점(잡티)·너무 큰 면(배경) 제외
@@ -246,7 +250,13 @@ function autoSeedCore(){
   });
   if(!best) return null;                         // 반복되는 물체가 없으면 직접 선택으로
   // 3) 그 물체 안에서 중심에 가장 가까운 픽셀
-  let bp=best.px[0],bd=1e18; for(const p of best.px){const d=(p%W-best.cx)**2+(((p/W)|0)-best.cy)**2;if(d<bd){bd=d;bp=p}}
+  // 그 물체 안에서 가장 깊은 곳(테두리에서 가장 먼 점) = 그늘·반사 없는 몸체 색
+  let cur=new Set(best.px), last=best.px;
+  for(let it=0;it<60&&cur.size;it++){
+    const nx=[]; for(const p of cur) if(cur.has(p-1)&&cur.has(p+1)&&cur.has(p-W)&&cur.has(p+W)) nx.push(p);
+    if(!nx.length) break; last=nx; cur=new Set(nx);
+  }
+  let bp=last[0],bd=1e18; for(const p of last){const d=(p%W-best.cx)**2+(((p/W)|0)-best.cy)**2;if(d<bd){bd=d;bp=p}}
   return {x:bp%W,y:(bp/W)|0};
 }
 
@@ -285,6 +295,22 @@ function label(m){
     blobs.push(px);
   }
   return {lbl,blobs};
+}
+function fillRoundHoles(m){
+  // 물체 안의 '둥글고 큼직한' 빈 곳만 채움(와셔·링 부품·구멍 뚫린 정제).
+  // 약 사이 틈은 뾰족하거나 무더기에 비해 아주 작아서 그대로 둠 → 붙은 약 분리를 해치지 않음
+  const inv=new Uint8Array(m.length);for(let i=0;i<m.length;i++)inv[i]=m[i]?0:1;
+  const holes=label(inv).blobs, objs=label(m), o=m.slice(), N=W*H;
+  holes.forEach(px=>{
+    if(px.length<12||px.length>N*0.05) return;
+    let edge=0,border=false,owner=-1;
+    for(const p of px){const x=p%W,y=(p/W)|0; if(x===0||y===0||x===W-1||y===H-1){border=true;break}
+      for(const q of [p-1,p+1,p-W,p+W]) if(m[q]){edge++;owner=objs.lbl[q];break}}
+    if(border||owner<0) return;
+    const rough=edge*edge/(4*Math.PI*px.length);
+    if(rough<1.2&&px.length>objs.blobs[owner].length*0.06) px.forEach(p=>o[p]=1);
+  });
+  return o;
 }
 function fillSmallHoles(m,maxPx){
   const inv=new Uint8Array(m.length);for(let i=0;i<m.length;i++)inv[i]=m[i]?0:1;
@@ -342,7 +368,7 @@ function kmeans(px,k){
 self.onmessage=e=>{
   const m=e.data;
   try{
-    W=m.w; H=m.h; TOL=m.tol;
+    W=m.w; H=m.h; TOL=m.tol; HINT=m.hint||null;
     photo={data:new Uint8ClampedArray(m.buf)}; lab=toLab(photo.data);
     let s=m.seed;
     if(m.auto||!s) s=autoSeed();

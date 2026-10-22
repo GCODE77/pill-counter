@@ -1,5 +1,5 @@
 {
-  "version": "4.6",
-  "notes": "원형·장방형·별 등 여러 모양 지원, 모양이 섞여도 같은 모양만 계수",
+  "version": "4.7",
+  "notes": "테두리를 그려 기준 지정(자석처럼 맞춤), 구멍 있는 부품 인식, 안내 글자 잘림 수정",
   "files": ["index.html", "engine.js", "manifest.webmanifest"]
 }
