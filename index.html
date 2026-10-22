@@ -381,7 +381,7 @@
   </div>
 </div>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.7</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.8</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -615,7 +615,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=4.7');
+  engine=new Worker('engine.js?v=4.8');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -909,7 +909,7 @@ view.addEventListener('pointerup',e=>{
   view.dataset.skipClick='1';
   const ref=snapLasso(L.pts);
   if(!ref){ ctx.putImageData(photo,0,0); toast('테두리 안에서 물체를 찾지 못했습니다. 물체를 조금 더 크게 둘러 주세요'); return; }
-  refHint={L:ref.L,A:ref.A,B:ref.B,area:ref.area}; refOutline=ref.outline;
+  refHint={L:ref.L,A:ref.A,B:ref.B,area:ref.area,len:ref.len,wid:ref.wid}; refOutline=ref.outline;
   seed=ref.seed; manual=[]; run(false);
 });
 // 그린 테두리 안에서 '바깥 바닥과 다른 색'인 픽셀만 물체로 보고, 그 실제 테두리에 맞춤
@@ -945,7 +945,11 @@ function snapLasso(poly){
   let cur=set,last=best; for(let it=0;it<80;it++){const nx=[];for(const p of cur) if(cur.has(p-1)&&cur.has(p+1)&&cur.has(p-bw)&&cur.has(p+bw)) nx.push(p); if(!nx.length)break; last=nx; cur=new Set(nx);}
   const sp=last[(last.length/2)|0];
   const outline=best.filter(k=>!set.has(k-1)||!set.has(k+1)||!set.has(k-bw)||!set.has(k+bw)).map(k=>({x:x0+k%bw,y:y0+((k/bw)|0)}));
-  return {L:sl,A:sa,B:sb,area:best.length,seed:{x:x0+sp%bw,y:y0+((sp/bw)|0)},outline};
+  // 그린 물체의 길이·폭(방향과 무관)
+  let mx=0,my=0; best.forEach(k=>{mx+=k%bw;my+=(k/bw)|0}); mx/=best.length; my/=best.length;
+  let xx=0,yy=0,xy=0; best.forEach(k=>{const dx=k%bw-mx,dy=((k/bw)|0)-my;xx+=dx*dx;yy+=dy*dy;xy+=dx*dy}); xx/=best.length;yy/=best.length;xy/=best.length;
+  const tt=(xx+yy)/2,dd=Math.sqrt(((xx-yy)/2)**2+xy*xy);
+  return {L:sl,A:sa,B:sb,area:best.length,len:4*Math.sqrt(tt+dd),wid:4*Math.sqrt(Math.max(0,tt-dd)),seed:{x:x0+sp%bw,y:y0+((sp/bw)|0)},outline};
 }
 
 view.addEventListener('click',e=>{
@@ -1108,7 +1112,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='4.7';
+const APP_VERSION='4.8';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){

@@ -121,21 +121,21 @@ function count(){
   const sArea=HINT?HINT.area:commonSize(info.filter(o=>o.n===1).map(o=>o.px.length),sInfo.px.length/Math.max(1,sInfo.n));
   const singles=info.filter(o=>o.n===1&&o.px.length>sArea*0.7&&o.px.length<sArea*1.4);
   const med=f=>{const v=singles.map(f).sort((a,b)=>a-b);return v[v.length>>1]};
-  const Ap=singles.length>=3?med(o=>o.px.length):sArea;
+  const Ap=HINT?HINT.area:singles.length>=3?med(o=>o.px.length):sArea;
   // 중심부의 길쭉한 정도(길이/폭): 단독 약들의 중심부 기준값
   const aspect=px=>{const q=pca(px);return q.len/Math.max(1,q.wid)};
   const singleCores=singles.map(o=>coresOf[o.f].find(c=>coreK(blobs[c])===1)).filter(c=>c!==undefined);
   const refAsp=singleCores.length>=3?singleCores.map(c=>aspect(blobs[c])).sort((a,b)=>a-b)[singleCores.length>>1]:null;
   const refDE=singles.length>=3?med(o=>o.dE):sInfo.dE, refRough=singles.length>=3?med(o=>o.rough):sInfo.rough, refClip=singles.length>=3?med(o=>o.clip):sInfo.clip;
-  const Lp=singles.length>=3?med(o=>o.shape.len):sInfo.shape.len;
-  const Wp=singles.length>=3?med(o=>o.shape.wid):sInfo.shape.wid;
+  const Lp=HINT&&HINT.len?HINT.len:singles.length>=3?med(o=>o.shape.len):sInfo.shape.len;   // 테두리로 지정했으면 그 물체 모양 그대로
+  const Wp=HINT&&HINT.wid?HINT.wid:singles.length>=3?med(o=>o.shape.wid):sInfo.shape.wid;
   // 8) 덩어리마다 유형 판정 + 개수
   const pts=[], stat={단독:0,붙음:0,겹침:0,눕힘:0,세움:0,제외:0};
   info.forEach(o=>{
     const area=o.px.length, ratio=area/Ap, sh=o.shape;
     if(ratio<0.15||(ratio<0.3&&sh.wid<Wp*0.4)) return;     // 부스러기·노이즈 (세운 약은 작지만 둥글어서 통과)
     // 빛 반사: 기준 약보다 훨씬 하얗게 날아갔거나, 테두리가 약답지 않게 들쭉날쭉하면 버림
-    if(o.clip>Math.max(0.2,refClip+0.15)) return;
+    if(o.clip>Math.max(0.6,refClip+0.35)) return;      // 대부분이 하얗게 날아간 것만 반사로 봄(조명 따라 밝기 차이는 허용)
     // 빛 반사·바닥 무늬: 기준 약과 색이 꽤 다르거나, 테두리가 약 무더기보다 훨씬 들쭉날쭉하면 세지 않음
     const whitish=Math.hypot(A,B)<14;
     if(whitish&&o.dE>Math.max(7,refDE*3+4)) return;
@@ -216,6 +216,64 @@ function autoSeed(){
   W=sw;H=sh;lab=small;
   let r=null; try{ r=autoSeedCore(); } finally { W=big.W;H=big.H;lab=big.lab; }
   return r&&{x:Math.min(W-1,Math.round(r.x/k)),y:Math.min(H-1,Math.round(r.y/k))};
+}
+/* 두 번째 자동 방법: 물체가 몇 개뿐인 사진(부품 2~10개 등)
+   바닥색(사진 가장자리의 대표색)과 다른 큼직한 물체 중 같은 크기·모양이 2개 이상이면,
+   그중 하나를 '테두리로 그린 것처럼' 기준으로 삼음 → {seed, hint} 반환 */
+function autoFewObjects(){
+  const k=Math.min(1,240/Math.max(W,H)), sw=Math.round(W*k), sh=Math.round(H*k);
+  const big={W,H,lab}, small=new Float32Array(sw*sh*3);
+  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const si=((y/k|0)*big.W+(x/k|0))*3,di=(y*sw+x)*3;small[di]=lab[si];small[di+1]=lab[si+1];small[di+2]=lab[si+2]}
+  W=sw;H=sh;lab=small;
+  let res=null;
+  try{
+    const N=W*H, hist=new Map(), Q=10;
+    const key=i=>((lab[i*3]/Q)|0)*10000+(((lab[i*3+1]+128)/Q)|0)*100+(((lab[i*3+2]+128)/Q)|0);
+    for(let x=0;x<W;x++){[x,(H-1)*W+x].forEach(i=>hist.set(key(i),(hist.get(key(i))||0)+1))}
+    for(let y=0;y<H;y++){[y*W,y*W+W-1].forEach(i=>hist.set(key(i),(hist.get(key(i))||0)+1))}
+    let bk=0,bc=0; hist.forEach((c,k2)=>{if(c>bc){bc=c;bk=k2}});
+    // 바닥색 = 가장자리에서 가장 흔한 색 주변의 평균
+    const bL0=((bk/10000|0)+0.5)*Q, bA0=(((bk/100|0)%100)+0.5)*Q-128, bB0=((bk%100)+0.5)*Q-128;
+    let bl=0,ba=0,bb=0,bn=0;
+    for(let i=0;i<N;i++){const d=Math.hypot((lab[i*3]-bL0)*0.5,lab[i*3+1]-bA0,lab[i*3+2]-bB0);if(d<14){bl+=lab[i*3];ba+=lab[i*3+1];bb+=lab[i*3+2];bn++}}
+    if(bn<N*0.2) return null;
+    bl/=bn;ba/=bn;bb/=bn;
+    let fg=new Uint8Array(N);
+    for(let i=0;i<N;i++) if(Math.hypot((lab[i*3]-bl)*0.5,lab[i*3+1]-ba,lab[i*3+2]-bb)>20) fg[i]=1;
+    fg=erode(dilate(dilate(erode(fg)))); fg=fillRoundHoles(fg);
+    const {blobs}=label(fg), cand=[];
+    blobs.forEach(px=>{
+      if(px.length<N*0.004||px.length>N*0.15) return;
+      let edge=0,touch=false; for(const p of px){const x=p%W,y=(p/W)|0; if(x<1||y<1||x>W-2||y>H-2){touch=true;break} if(!fg[p-1]||!fg[p+1]||!fg[p-W]||!fg[p+W])edge++}
+      if(touch) return;
+      const rough=edge*edge/(4*Math.PI*px.length); if(rough>2.2) return;
+      cand.push({px,n:px.length,rough,shape:pca(px)});
+    });
+    let best=null,bs=0;
+    cand.forEach(c=>{
+      // 같은 물체 = 크기가 비슷하거나(1배), 2~3개가 붙어 약 2배·3배인 것
+      let sim=0; for(const o of cand){ if(o===c) continue; const q=o.n/c.n, k2=Math.round(q);
+        if(k2<1||k2>3||Math.abs(q-k2)>0.15*k2) continue;
+        if(k2===1&&!(o.shape.len>c.shape.len*0.75&&o.shape.len<c.shape.len*1.33)) continue;
+        if(k2>=2&&!(o.shape.len>=c.shape.len*1.3&&o.shape.wid>=c.shape.wid*0.8)) continue;   // 붙은 2~3개는 길어지고, 1개보다 좁아질 수 없음
+        sim++; }
+      if(sim<1) return;
+      const sc=sim+1-c.rough*0.3-(c.n/N)*2; if(sc>bs){bs=sc;best=c}   // 같은 점수면 작은 쪽(1알)을 기준으로
+    });
+    if(!best) return null;
+    // 그 물체에서 가장 넓은 색(예: 흰 몸체)과, 그 색 중 가장 깊은 점
+    const hb=new Map(); best.px.forEach(p=>{const kk=key(p);hb.set(kk,(hb.get(kk)||0)+1)});
+    let mk=0,mc=0; hb.forEach((c,k2)=>{if(c>mc){mc=c;mk=k2}});
+    const cL=((mk/10000|0)+0.5)*Q, cA=(((mk/100|0)%100)+0.5)*Q-128, cB=((mk%100)+0.5)*Q-128;
+    const body=best.px.filter(p=>Math.hypot((lab[p*3]-cL)*0.5,lab[p*3+1]-cA,lab[p*3+2]-cB)<14);
+    let sl=0,sa=0,sb=0; body.forEach(p=>{sl+=lab[p*3];sa+=lab[p*3+1];sb+=lab[p*3+2]});
+    let cur=new Set(body),last=body; for(let it=0;it<40;it++){const nx=[];for(const p of cur) if(cur.has(p-1)&&cur.has(p+1)&&cur.has(p-W)&&cur.has(p+W)) nx.push(p); if(!nx.length)break; last=nx; cur=new Set(nx);}
+    const sp=last[(last.length/2)|0];
+    res={x:sp%W,y:(sp/W)|0,hint:{L:sl/body.length,A:sa/body.length,B:sb/body.length,area:best.n,len:best.shape.len,wid:best.shape.wid}};
+  } finally { W=big.W;H=big.H;lab=big.lab; }
+  if(!res) return null;
+  const h=res.hint; h.area/=k*k; h.len/=k; h.wid/=k;
+  return {seed:{x:Math.min(W-1,Math.round(res.x/k)),y:Math.min(H-1,Math.round(res.y/k))},hint:h};
 }
 function autoSeedCore(){
   const N=W*H, Q=12;
@@ -370,15 +428,18 @@ self.onmessage=e=>{
   try{
     W=m.w; H=m.h; TOL=m.tol; HINT=m.hint||null;
     photo={data:new Uint8ClampedArray(m.buf)}; lab=toLab(photo.data);
-    let s=m.seed;
-    if(m.auto||!s) s=autoSeed();
-    if(!s){ self.postMessage({id:m.id,none:true}); return; }
-    seed=s;
-    const r=count();
-    const counted=r.pts.filter(p=>p.type!=='제외').length;
-    // 자동 모드 검증: 기준과 똑같은 모습의 물체가 3개 이상이고, 주변과 뚜렷이 달라야 '약'으로 인정
-    self.lastCheck={counted,singles:r.singles,contrast:r.contrast};
-    if(m.auto&&(counted<2||(r.singles||0)<3||(r.contrast||0)<14)){ self.postMessage({id:m.id,none:true,check:self.lastCheck}); return; }
+    let s=m.seed, r=null, few=false;
+    const valid=r=>{const c=r.pts.filter(p=>p.type!=='제외').length; return c>=2&&(r.singles||0)>=(few?2:3)&&(r.contrast||0)>=14};
+    if(m.auto||!s){
+      s=autoSeed();
+      if(s){ seed=s; r=count(); }
+      // 1차 자동이 실패하면: 몇 개 안 되는 큰 물체용 2차 자동
+      if(!s||!valid(r)){
+        const f=autoFewObjects();
+        if(f){ few=true; s=f.seed; seed=s; HINT=f.hint; r=count(); }
+      }
+      if(!s||!r||!valid(r)){ self.postMessage({id:m.id,none:true}); return; }
+    }else{ seed=s; r=count(); }
     self.postMessage({id:m.id,seed:s,pts:r.pts,stat:r.stat||{},r:r.r,mask:r.mask},[r.mask.buffer]);
   }catch(err){ self.postMessage({id:m.id,none:true,error:String(err)}); }
 };
