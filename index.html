@@ -380,7 +380,7 @@
   </div>
 </div>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.5</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.6</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -456,7 +456,7 @@
   <section class="page hidden help" id="pgHelp">
     <div class="card">
       <h2>필카운터란?</h2>
-      <div style="font-size:17px;line-height:1.7">사진 한 장으로 같은 약이 <b>몇 알</b>인지 자동으로 세어 주는 앱입니다. 터치한 약과 <b>색·모양·크기가 같은 약만</b> 셉니다.</div>
+      <div style="font-size:17px;line-height:1.7">사진 한 장으로 같은 약이 <b>몇 알</b>인지 자동으로 세어 주는 앱입니다. 터치한 약과 <b>색·모양·크기가 같은 약만</b> 셉니다.<br>원형·타원형·장방형(캡슐형)·마름모·삼각형·육각형·<b>별 모양</b> 등 모양에 상관없이 셀 수 있고, 모양이 다른 약이 섞여 있으면 기준 약과 같은 모양만 셉니다.</div>
     </div>
     <div class="card">
       <h2>① 촬영</h2>
@@ -614,7 +614,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=4.5');
+  engine=new Worker('engine.js?v=4.6');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -1043,7 +1043,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='4.5';
+const APP_VERSION='4.6';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){

@@ -120,6 +120,10 @@ function count(){
   const singles=info.filter(o=>o.n===1&&o.px.length>sArea*0.7&&o.px.length<sArea*1.4);
   const med=f=>{const v=singles.map(f).sort((a,b)=>a-b);return v[v.length>>1]};
   const Ap=singles.length>=3?med(o=>o.px.length):sArea;
+  // 중심부의 길쭉한 정도(길이/폭): 단독 약들의 중심부 기준값
+  const aspect=px=>{const q=pca(px);return q.len/Math.max(1,q.wid)};
+  const singleCores=singles.map(o=>coresOf[o.f].find(c=>coreK(blobs[c])===1)).filter(c=>c!==undefined);
+  const refAsp=singleCores.length>=3?singleCores.map(c=>aspect(blobs[c])).sort((a,b)=>a-b)[singleCores.length>>1]:null;
   const refDE=singles.length>=3?med(o=>o.dE):sInfo.dE, refRough=singles.length>=3?med(o=>o.rough):sInfo.rough, refClip=singles.length>=3?med(o=>o.clip):sInfo.clip;
   const Lp=singles.length>=3?med(o=>o.shape.len):sInfo.shape.len;
   const Wp=singles.length>=3?med(o=>o.shape.wid):sInfo.shape.wid;
@@ -144,7 +148,8 @@ function count(){
     if(o.n<=1&&o.rough>Math.max(2.2,refRough*1.8)) return;
     let k=o.n, type;
     if(k<=1){
-      if(ratio>1.15&&(sh.len>Lp*1.35||sh.wid>Wp*1.45)){ k=Math.max(2,Math.round(ratio-0.1)); type='겹침'; }
+      // 겹친 약: 길거나 넓어지되, 폭이 1알보다 좁아질 수는 없음(좁으면 모양이 다른 물건)
+      if(ratio>1.15&&sh.wid>=Wp*0.85&&(sh.len>Lp*1.35||sh.wid>Wp*1.45)){ k=Math.max(2,Math.round(ratio-0.1)); type='겹침'; }
       else{
         k=1;
         const round=Lp<Wp*1.3;
@@ -159,9 +164,15 @@ function count(){
     }else{
       // 붙은 무더기: 약 1알마다 중심부 크기로 판정 — 일부가 가려져 중심부가 작으면 '겹침'
       const cs=coresOf[o.f].filter(c=>coreK(blobs[c])>0);
+      // 중심부가 하나뿐인데 면적만 큰 '뭉툭한' 물체 = 약 여러 알이 아니라 크기가 다른 다른 물건 → 세지 않음
+      // (약이 맞닿으면 길쭉해지고, 빽빽한 무더기는 중심부가 여러 개로 나뉨)
+      if(cs.length===1&&!blobs[cs[0]].sub&&sh.len<Lp*1.45&&sh.wid<Wp*1.45) return;
+      if(sh.wid<Wp*0.8) return;                      // 기준 약 무더기는 1알보다 좁을 수 없음 → 더 가는 다른 물건
       const blobOverlap=area/k<Ap*0.85&&k<=4;   // 작은 무더기인데 1알당 면적이 줄었으면 서로 가린 것
       cs.forEach(c=>{
         const kc=coreK(blobs[c]), cr=blobs[c].sub?1:blobs[c].length/unit;
+        // 1알짜리 중심부인데 길쭉한 정도가 기준과 크게 다르면 다른 모양의 물건(예: 원형 기준일 때 장방형)
+        if(kc===1&&refAsp&&blobs[c].length>=3){const a=aspect(blobs[c]);if(a>refAsp*1.5||a<refAsp/1.5)return}
         const t=(kc===1&&cr<0.6)||blobOverlap?'겹침':'붙음';
         kmeans(blobs[c],kc).forEach(p=>{pts.push({x:p.x,y:p.y,type:t});stat[t]++});
       });

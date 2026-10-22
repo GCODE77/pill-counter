@@ -1,5 +1,5 @@
 {
-  "version": "4.5",
-  "notes": "흰 약 빛 반사 오인식 대폭 개선, 플래시 버튼 항상 표시",
+  "version": "4.6",
+  "notes": "원형·장방형·별 등 여러 모양 지원, 모양이 섞여도 같은 모양만 계수",
   "files": ["index.html", "engine.js", "manifest.webmanifest"]
 }
