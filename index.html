@@ -280,6 +280,8 @@
   .flash-btn{position:absolute;top:10px;right:10px;z-index:6;flex:none;min-height:34px;padding:6px 11px;border-radius:999px;font-size:13px;font-weight:600;
     background:rgba(10,12,18,.55);color:#e9e6de;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(10px)}
   .flash-btn .ic{width:15px;height:15px}
+  .lens-btn{right:auto;left:10px;font-variant-numeric:tabular-nums}
+  .lens-btn.warn{border-color:rgba(255,170,90,.7);color:#ffcf9a}
   .flash-btn.maybe{opacity:.8}
   .flash-btn.on{background:linear-gradient(145deg,var(--g1),var(--g2) 55%,var(--g3));color:#1b1405;border-color:transparent;box-shadow:0 0 18px rgba(226,196,126,.45)}
   .update-bar{position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top));z-index:70;display:flex;align-items:center;gap:10px;padding:10px 10px 12px 14px;
@@ -427,7 +429,7 @@
   </div>
 </div>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v5.1</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v5.2</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -446,6 +448,7 @@
     <canvas id="view" class="view hidden"></canvas>
     <canvas id="ovl" class="ovl hidden"></canvas>
     <div class="focus-ring" id="focusRing"></div>
+    <button class="flash-btn lens-btn hidden" id="lensBtn" aria-label="카메라 렌즈 바꾸기"><span>1×</span></button>
     <button class="flash-btn hidden" id="flashBtn" aria-label="플래시" aria-pressed="false">
       <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg><span>플래시</span>
     </button>
@@ -674,7 +677,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=5.1');
+  engine=new Worker('engine.js?v=5.2');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -732,6 +735,7 @@ async function stepCapture(){
     video.classList.remove('hidden');
     captureButtons(true);
     $('flashBtn').classList.toggle('hidden',!camTrack());
+    renderLens();
     if(liveOn) startLive(); else showPlainCamera();
   }catch(e){
     if(my!==capSeq) return;
@@ -791,6 +795,39 @@ function fixZoom(t){
   try{ const c=t.getCapabilities?t.getCapabilities():{}, z=t.getSettings?t.getSettings().zoom:null;
     if(c.zoom&&c.zoom.min<1&&c.zoom.max>=1&&(z==null||z<1)) t.applyConstraints({advanced:[{zoom:1}]}).catch(()=>{}); }catch(e){}
 }
+/* ---------- 지금 쓰는 렌즈 표시 (왼쪽 위) · 누르면 다음 후면 카메라로 ----------
+   브라우저는 실제 배율을 알려주지 않으므로 카메라 이름으로 추정해 표시 */
+function lensName(label){
+  if(/ultra|초광각|0\.5/i.test(label)) return {t:'0.5× 초광각',w:1};
+  if(/tele|망원/i.test(label)) return {t:'망원',w:1};
+  if(/macro|매크로/i.test(label)) return {t:'매크로',w:1};
+  if(/wide|광각|depth|심도/i.test(label)) return {t:'광각',w:1};
+  return null;
+}
+async function renderLens(){
+  const b=$('lensBtn'), t=camTrack(); if(!t){b.classList.add('hidden');return;}
+  let all=[]; try{ all=await backCameras(null); }catch(e){}
+  const id=t.getSettings?t.getSettings().deviceId:null, label=t.label||'';
+  const n=lensName(label), z=t.getSettings?t.getSettings().zoom:null;
+  let txt=n?n.t:(all.length>1&&all[0].deviceId!==id&&camRank(all[0])<1e6?'후면 '+(all.findIndex(d=>d.deviceId===id)+1):'1× 기본');
+  if(z&&z!==1&&!n) txt=(Math.round(z*10)/10)+'×';
+  b.querySelector('span').textContent=txt+(all.length>1?' ⇄':'');
+  b.classList.toggle('warn',!!(n&&n.w));
+  b.classList.remove('hidden'); b.title=label;
+}
+$('lensBtn').onclick=async e=>{
+  e.stopPropagation();
+  const t=camTrack(); if(!t) return;
+  const all=await backCameras(null); if(all.length<2){ toast('이 폰에서는 다른 후면 카메라를 고를 수 없습니다'); return; }
+  const id=t.getSettings?t.getSettings().deviceId:null, i=all.findIndex(d=>d.deviceId===id), nx=all[(i+1)%all.length];
+  try{
+    const s2=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:nx.deviceId},width:{ideal:1920},height:{ideal:1080}},audio:false});
+    const wasLive=!!live; stopLive(); stream.getTracks().forEach(x=>x.stop());
+    stream=s2; video.srcObject=stream; await video.play().catch(()=>{});
+    localStorage.setItem('pc.cam2',nx.deviceId); setFocusMode('continuous'); setupFlash(); renderLens();
+    if(wasLive||liveOn) startLive();
+  }catch(err){ toast('그 카메라를 열 수 없습니다'); }
+};
 // 갤럭시처럼 후면 카메라가 여러 개면, 브라우저가 고른 카메라에 플래시가 없을 수 있음 → 플래시 달린 후면 카메라를 찾아 바꿈
 let findingTorch=false;
 async function switchToTorchCamera(){
@@ -805,7 +842,7 @@ async function switchToTorchCamera(){
       if(caps.torch){
         const wasLive=!!live; stopLive();
         if(stream) stream.getTracks().forEach(x=>x.stop());
-        stream=s2; video.srcObject=stream; await video.play().catch(()=>{});
+        stream=s2; video.srcObject=stream; await video.play().catch(()=>{}); renderLens();
         localStorage.setItem('pc.cam2',d.deviceId); setFocusMode('continuous');
         if(wasLive||liveOn) startLive();
         return true;
@@ -843,7 +880,7 @@ function showPlainCamera(){
   view.classList.add('hidden'); video.classList.remove('hidden'); badge.style.display='none';
   guide.innerHTML='약을 펼쳐 놓고 촬영하세요<small>화면을 터치하면 초점을 맞춥니다 · 찍으면 자동으로 셉니다</small>';
 }
-function stopCam(){ stopLive(); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden'); $('flashBtn').classList.add('hidden') }
+function stopCam(){ stopLive(); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null} video.classList.add('hidden'); $('flashBtn').classList.add('hidden'); $('lensBtn').classList.add('hidden') }
 
 /* ---------- 실시간(라이브) 계수 ----------
    카메라 영상은 그대로 매끄럽게 보여주고, 그 위 투명 캔버스(ovl)에 결과 표시만 덧그림.
@@ -1253,7 +1290,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='5.1';
+const APP_VERSION='5.2';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){

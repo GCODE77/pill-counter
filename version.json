@@ -1,5 +1,5 @@
 {
-  "version": "5.1",
-  "notes": "초광각 대신 일반 1배 후면 카메라를 사용",
+  "version": "5.2",
+  "notes": "카메라 화면 왼쪽 위에 지금 렌즈(1×/0.5× 초광각 등) 표시, 눌러서 바꾸기",
   "files": ["index.html", "engine.js", "manifest.webmanifest"]
 }
