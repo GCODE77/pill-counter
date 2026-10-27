@@ -429,7 +429,7 @@
   </div>
 </div>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v5.2</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v5.3</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -677,7 +677,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=5.2');
+  engine=new Worker('engine.js?v=5.3');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -774,6 +774,20 @@ async function backCameras(exceptId){
   const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'&&d.deviceId!==exceptId&&!/front|전면|user|selfie/i.test(d.label));
   return devs.sort((a,b)=>camRank(a)-camRank(b));
 }
+// 안드로이드는 카메라 두 개를 동시에 열 수 없음 → 지금 카메라를 먼저 끄고 연다. 실패하면 원래 카메라로 되돌림
+async function openCamDevice(id){
+  const prev=camTrack(), prevId=prev&&prev.getSettings?prev.getSettings().deviceId:null;
+  if(stream){ stream.getTracks().forEach(x=>x.stop()); stream=null; }
+  const C=did=>navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:did},width:{ideal:1920},height:{ideal:1080}},audio:false});
+  try{ stream=await C(id); }
+  catch(e){
+    await new Promise(r=>setTimeout(r,250));            // 카메라가 완전히 닫힐 때까지 잠깐 기다렸다 한 번 더
+    try{ stream=await C(id); }
+    catch(e2){ try{ stream=prevId?await C(prevId):await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}); }catch(e3){} video.srcObject=stream; if(stream) await video.play().catch(()=>{}); return false; }
+  }
+  video.srcObject=stream; await video.play().catch(()=>{});
+  return true;
+}
 async function switchToMainCamera(){
   try{
     const cur=stream&&stream.getVideoTracks()[0]; if(!cur) return;
@@ -783,11 +797,8 @@ async function switchToMainCamera(){
     if(!best.label||best.deviceId===curId||camRank(best)>=1e6){ fixZoom(cur); return; }
     const curDev=all.find(d=>d.deviceId===curId);
     if(curDev&&camRank(curDev)<=camRank(best)){ fixZoom(cur); return; }
-    const s2=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:best.deviceId},width:{ideal:1920},height:{ideal:1080}},audio:false});
-    stream.getTracks().forEach(x=>x.stop());
-    stream=s2; video.srcObject=stream;
-    localStorage.setItem('pc.cam2',best.deviceId);
-    fixZoom(s2.getVideoTracks()[0]);
+    if(await openCamDevice(best.deviceId)) localStorage.setItem('pc.cam2',best.deviceId);
+    fixZoom(camTrack());
   }catch(e){}
 }
 // 한 카메라 안에서 확대 비율이 1배보다 작게 잡혀 있으면 1배로
@@ -819,14 +830,18 @@ $('lensBtn').onclick=async e=>{
   e.stopPropagation();
   const t=camTrack(); if(!t) return;
   const all=await backCameras(null); if(all.length<2){ toast('이 폰에서는 다른 후면 카메라를 고를 수 없습니다'); return; }
-  const id=t.getSettings?t.getSettings().deviceId:null, i=all.findIndex(d=>d.deviceId===id), nx=all[(i+1)%all.length];
-  try{
-    const s2=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:nx.deviceId},width:{ideal:1920},height:{ideal:1080}},audio:false});
-    const wasLive=!!live; stopLive(); stream.getTracks().forEach(x=>x.stop());
-    stream=s2; video.srcObject=stream; await video.play().catch(()=>{});
-    localStorage.setItem('pc.cam2',nx.deviceId); setFocusMode('continuous'); setupFlash(); renderLens();
-    if(wasLive||liveOn) startLive();
-  }catch(err){ toast('그 카메라를 열 수 없습니다'); }
+  const id=t.getSettings?t.getSettings().deviceId:null, i=all.findIndex(d=>d.deviceId===id);
+  const b=$('lensBtn'); if(b.disabled) return; b.disabled=true;
+  const wasLive=!!live; stopLive();
+  let ok=false;
+  for(let k=1;k<all.length&&!ok;k++){                     // 열리지 않는 카메라(심도 센서 등)는 건너뛰고 다음 것으로
+    const nx=all[(i+k)%all.length];
+    if(await openCamDevice(nx.deviceId)){ ok=true; localStorage.setItem('pc.cam2',nx.deviceId); }
+  }
+  if(stream){ setFocusMode('continuous'); setupFlash(); }
+  renderLens(); b.disabled=false;
+  if(!ok) toast('다른 후면 카메라를 열 수 없습니다');
+  if(stream&&(wasLive||liveOn)) startLive();
 };
 // 갤럭시처럼 후면 카메라가 여러 개면, 브라우저가 고른 카메라에 플래시가 없을 수 있음 → 플래시 달린 후면 카메라를 찾아 바꿈
 let findingTorch=false;
@@ -835,21 +850,18 @@ async function switchToTorchCamera(){
   try{
     const cur=stream&&stream.getVideoTracks()[0], curId=cur&&cur.getSettings?cur.getSettings().deviceId:null;
     const devs=(await backCameras(curId)).filter(d=>camRank(d)<1e6);   // 플래시를 찾더라도 초광각·망원으로는 바꾸지 않음
+    if(!devs.length) return false;
+    const wasLive=!!live; stopLive();
+    let found=false;
     for(const d of devs){
-      let s2=null;
-      try{ s2=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:d.deviceId},width:{ideal:1920},height:{ideal:1080}},audio:false}); }catch(e){ continue; }
-      const t=s2.getVideoTracks()[0], caps=t.getCapabilities?t.getCapabilities():{};
-      if(caps.torch){
-        const wasLive=!!live; stopLive();
-        if(stream) stream.getTracks().forEach(x=>x.stop());
-        stream=s2; video.srcObject=stream; await video.play().catch(()=>{}); renderLens();
-        localStorage.setItem('pc.cam2',d.deviceId); setFocusMode('continuous');
-        if(wasLive||liveOn) startLive();
-        return true;
-      }
-      s2.getTracks().forEach(x=>x.stop());
+      if(!(await openCamDevice(d.deviceId))) continue;
+      const t=camTrack(), caps=t&&t.getCapabilities?t.getCapabilities():{};
+      if(caps.torch){ localStorage.setItem('pc.cam2',d.deviceId); found=true; break; }
     }
-    return false;
+    if(!found&&curId) await openCamDevice(curId);
+    setFocusMode('continuous'); renderLens();
+    if(stream&&(wasLive||liveOn)) startLive();
+    return found;
   } finally { findingTorch=false; }
 }
 $('flashBtn').onclick=async e=>{
@@ -1290,7 +1302,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='5.2';
+const APP_VERSION='5.3';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){

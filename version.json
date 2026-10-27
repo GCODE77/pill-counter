@@ -1,5 +1,5 @@
 {
-  "version": "5.2",
-  "notes": "카메라 화면 왼쪽 위에 지금 렌즈(1×/0.5× 초광각 등) 표시, 눌러서 바꾸기",
+  "version": "5.3",
+  "notes": "렌즈 바꾸기에서 "그 카메라를 열 수 없습니다" 오류 수정, 기본 1배 카메라 자동 선택 개선",
   "files": ["index.html", "engine.js", "manifest.webmanifest"]
 }
