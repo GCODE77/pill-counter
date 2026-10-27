@@ -122,7 +122,7 @@ GitHub Pages(`main` 브랜치 루트)로 배포됩니다. 새 버전을 낼 때�
 
 1. `index.html` — `APP_VERSION`, 머리글의 `vX.Y`, `engine.js?v=X.Y`
 
-현재 버전: **v4.9** · 인수인계 문서: [HANDOFF.md](HANDOFF.md)
+현재 버전: **v5.0** · 인수인계 문서: [HANDOFF.md](HANDOFF.md)
 2. `version.json` — `version`, `notes`(알림에 보일 한 줄)
 3. `CHANGELOG.md` — 변경 내용
 

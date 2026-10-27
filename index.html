@@ -368,6 +368,52 @@
   .scan .bar{background:rgba(10,12,18,.92);border-top:1px solid var(--hair)}
   #pgCount{padding-bottom:64px}
   #pgCount .actions{background:linear-gradient(180deg,rgba(6,7,11,0),rgba(6,7,11,.97) 18%)!important;padding-top:12px}
+  /* v5.0 — 계수 화면은 스크롤 없이 한 화면에: 사진 영역이 남는 높이를 모두 차지 */
+  body[data-pg="pgCount"]{height:100dvh;overflow:hidden}
+  body[data-pg="pgCount"] .app{height:100dvh;min-height:0;padding-top:8px;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  #pgCount{flex:1;min-height:0;display:flex;flex-direction:column;padding-bottom:0!important}
+  #pgCount .steps{margin:6px 2px 6px}
+  #pgCount .steps:before{top:11px}
+  #pgCount .step{flex-direction:row;justify-content:center;gap:6px;font-size:12px}
+  #pgCount .step i{width:22px;height:22px;font-size:11px}
+  #pgCount .guide{padding:8px 12px;margin-bottom:6px;font-size:16px;line-height:1.3}
+  #pgCount .guide small{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  #pgCount .count-badge{min-height:0;padding:5px 14px 6px;margin-bottom:6px;font-size:32px;line-height:1.05}
+  #pgCount .count-badge .lbl{font-size:9.5px;margin-bottom:0}
+  #pgCount .count-badge .sub{font-size:11.5px}
+  #pgCount .count-badge .wait{padding:6px 0;font-size:14px}
+  #pgCount>*{flex:none}                               /* 위아래 요소는 줄어들지 않고, 사진 영역만 늘고 줄어듦 */
+  #pgCount .stage{flex:1 1 auto;min-height:150px}
+  #pgCount video,#pgCount canvas.view{width:100%;height:100%;max-width:none;max-height:none!important;object-fit:contain}
+  #pgCount .actions{position:static!important;background:none!important;padding:0!important;margin-top:8px;flex-wrap:nowrap;flex:none}
+  header{flex:none} header img{width:32px;height:32px} .wordmark h1{font-size:18px} .wordmark span{font-size:9px}
+  /* 사진 위에 겹쳐 보이는 결과 보조 정보 */
+  .stage .tune{position:absolute;left:8px;right:8px;bottom:8px;z-index:6;margin:0;padding:0;background:none!important;border:0!important;backdrop-filter:none;display:none;pointer-events:none}
+  .stage .tune>*{pointer-events:auto}
+  .stage .tune .stat{flex-wrap:nowrap;overflow-x:auto;gap:6px;scrollbar-width:none}
+  .stage .tune .stat::-webkit-scrollbar{display:none}
+  .stage .tune .chip{flex:none;background:rgba(8,9,14,.72);backdrop-filter:blur(8px);font-size:12px;padding:4px 10px}
+  .stage .tune .warn{margin-top:6px;font-size:12px;padding:6px 10px;background:rgba(40,12,18,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+  .stage .tune .warn.full{white-space:normal}
+  .stage .tune details.adv{margin-top:6px;border:0;padding:0}
+  .stage .tune details.adv summary{display:inline-flex;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(8,9,14,.72);border:1px solid rgba(255,255,255,.16);font-size:12px;color:#e9e6de}
+  .stage .tune details.adv summary:after{display:none}
+  .stage .tune details.adv[open]{background:rgba(8,9,14,.85);border-radius:14px;padding:8px 10px;backdrop-filter:blur(10px)}
+  .stage .tune details.adv label{margin-top:6px}
+  .stage .tune .hint{font-size:11.5px;margin-top:2px}
+  /* 기록 저장 창 */
+  .sheet-dim{position:fixed;inset:0;background:rgba(3,4,8,.55);backdrop-filter:blur(3px);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+  .sheet-dim.open{opacity:1;pointer-events:auto}
+  .name-row.sheet{display:block!important;position:fixed;left:0;right:0;bottom:0;z-index:51;margin:0;padding:10px 16px calc(16px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg,#171b2a,#10131d);border-top:1px solid rgba(226,196,126,.35);border-radius:22px 22px 0 0;box-shadow:0 -20px 50px rgba(0,0,0,.6);
+    transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+  .name-row.sheet.open{transform:none}
+  .sheet-grip{width:38px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);margin:0 auto 10px}
+  .sheet-title{font-size:17px;font-weight:700;margin-bottom:10px}
+  .sheet-title b{color:var(--g1);margin-left:4px}
+  .sheet-actions{display:flex;gap:8px;margin-top:12px}
+  .sheet-actions button{min-height:46px}
+  .sheet-actions .cta{flex:1.6}
 </style>
 </head>
 <body data-pg="pgCount">
@@ -381,7 +427,7 @@
   </div>
 </div>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v4.9</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v5.0</small></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -408,26 +454,32 @@
       <button id="undoBtn" aria-label="되돌리기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>되돌리기</span></button>
       <button id="resetBtn" aria-label="처음 결과로"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg><span>처음으로</span></button>
     </div>
-  </div>
-
-  <div class="tune" id="tune">
+    <div class="tune" id="tune">
     <div class="stat" id="stat"></div>
     <div class="warn" id="warn"></div>
     <details class="adv">
       <summary>세부 조정<span id="tolVal"></span></summary>
       <label><span>색 허용 범위</span></label>
       <input type="range" id="tol" min="10" max="30" value="20">
-      <div class="hint">개수가 적게 나오면 오른쪽으로, 배경까지 잡히면 왼쪽으로</div>
+      <div class="hint">적게 나오면 오른쪽, 배경까지 잡히면 왼쪽</div>
     </details>
+    </div>
   </div>
 
-  <div class="name-row" id="nameRow">
+  <div class="sheet-dim" id="sheetDim"></div>
+  <div class="name-row sheet" id="nameRow">
+    <div class="sheet-grip"></div>
+    <div class="sheet-title">기록 저장 <b id="sheetCount"></b></div>
     <label for="drugName">약 이름 (선택)</label>
     <div class="name-with-btn">
       <input class="text" id="drugName" placeholder="예) 타이레놀 500mg" list="drugList" autocomplete="off">
       <button class="secondary" id="nameScan"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12"/></svg>바코드</button>
     </div>
     <datalist id="drugList"></datalist>
+    <div class="sheet-actions">
+      <button class="ghost" id="sheetCancel">취소</button>
+      <button class="primary cta" id="sheetSave"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><span>저장</span></button>
+    </div>
   </div>
   <div class="actions" id="actions"></div>
   <input type="file" id="file" accept="image/*">
@@ -605,6 +657,12 @@ let stream=null, photo=null, W=0, H=0, seed=null, result=null, manual=[];
 const MAXSIDE=900;
 
 /* ---------- 화면 흐름 ---------- */
+// 요소 안에서 그림이 실제로 그려진 영역(가로세로 비율 유지로 생긴 여백 제외)
+function fitRect(el,w,h){
+  const r=el.getBoundingClientRect(); if(!w||!h) return r;
+  const s=Math.min(r.width/w,r.height/h), cw=w*s, ch=h*s;
+  return {left:r.left+(r.width-cw)/2, top:r.top+(r.height-ch)/2, width:cw, height:ch};
+}
 function setStep(n){
   if(n!==3) $('editTools').classList.remove('show');
   ['s1','s2','s3'].forEach((s,i)=>{$(s).className='step'+(i+1===n?' active':i+1<n?' done':'')});
@@ -616,7 +674,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=4.9');
+  engine=new Worker('engine.js?v=5.0');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -650,7 +708,7 @@ let liveOn=localStorage.getItem('pc.live')!=='0';   // 실시간 켜짐/꺼짐 (
 let capSeq=0, picking=false;
 async function stepCapture(){
   const my=++capSeq;
-  $('nameRow').style.display='none';
+  closeSheet();
   stopLive();
   setStep(1); result=null; seed=null; manual=[]; runTok++; $('busy').style.display='none';
   badge.style.display='none'; $('tune').style.display='none';
@@ -763,7 +821,7 @@ function startLive(){
   live={busy:false,auto:true,seed:null,raf:0,last:null};
   video.classList.remove('hidden'); view.classList.add('hidden'); ovl.classList.remove('hidden');
   octx.clearRect(0,0,ovl.width,ovl.height);
-  guide.innerHTML='비추기만 하면 자동으로 셉니다<small>터치하면 초점 · 숫자가 멈추면 <b>촬영</b> · 특정 약만 세려면 길게 누르기</small>';
+  guide.innerHTML='비추기만 하면 자동으로 셉니다<small>터치 초점 · 숫자가 멈추면 <b>촬영</b> · 길게 누르면 그 약만</small>';
   badge.style.display='block'; badge.innerHTML='<span class="wait">약이 보이지 않습니다 · 약을 비춰 주세요</span>';
   liveLoop();
 }
@@ -792,8 +850,9 @@ function liveLoop(){
   live.raf=requestAnimationFrame(liveLoop);
 }
 function drawOverlay(d){
-  const dpr=window.devicePixelRatio||1, cw=video.clientWidth, ch=video.clientHeight;
-  ovl.style.left=video.offsetLeft+'px'; ovl.style.top=video.offsetTop+'px';
+  const dpr=window.devicePixelRatio||1, fr=fitRect(video,video.videoWidth,video.videoHeight), sr=$('stage').getBoundingClientRect();
+  const cw=Math.round(fr.width), ch=Math.round(fr.height);
+  const stg=$('stage'); ovl.style.left=(fr.left-sr.left-stg.clientLeft)+'px'; ovl.style.top=(fr.top-sr.top-stg.clientTop)+'px';   // 테두리 두께만큼 보정
   ovl.style.width=cw+'px'; ovl.style.height=ch+'px';
   if(ovl.width!==Math.round(cw*dpr)){ovl.width=Math.round(cw*dpr);ovl.height=Math.round(ch*dpr)}
   const s=ovl.width/live.fw; octx.clearRect(0,0,ovl.width,ovl.height);
@@ -851,7 +910,7 @@ function loadSource(src,w,h,normSeed){
 
 function stepPick(){
   delete badge.dataset.final;
-  $('nameRow').style.display='none';
+  closeSheet();
   setStep(2); result=null; ctx.putImageData(photo,0,0); badge.style.display='none'; $('tune').style.display='none';
   guide.innerHTML='셀 물체 <b>하나</b>의 테두리를 그리세요<small>손가락으로 한 바퀴 둘러 그리면 테두리에 딱 맞춰 같은 것을 찾습니다 · 터치만 해도 됩니다</small>';
   actions.innerHTML=''; btn('다시 촬영','ghost',stepCapture,'redo');
@@ -864,9 +923,18 @@ function stepResult(){
   btn('다시 촬영','ghost',stepCapture,'redo');
   btn('직접 선택','ghost',stepPick,'target');
   if(invPending) btn('낱알로 반영','primary cta',applyCountToInv,'pkg');
-  else btn('기록 저장','primary cta',saveRecord,'check');
-  $('nameRow').style.display=invPending?'none':'block';
+  else btn('기록 저장','primary cta',openSheet,'check');
+  closeSheet();
 }
+
+/* ---------- 기록 저장 창 (아래에서 올라옴) ---------- */
+function openSheet(){ $('sheetCount').textContent=result?result.total+'개':''; $('nameRow').classList.add('open'); $('sheetDim').classList.add('open'); }
+function closeSheet(){ $('nameRow').classList.remove('open'); $('sheetDim').classList.remove('open'); }
+// 저장 창은 화면 기준으로 떠야 하므로(애니메이션 중인 화면 영역 밖으로) body로 옮김
+document.body.appendChild($('sheetDim')); document.body.appendChild($('nameRow'));
+$('warn').onclick=e=>{e.stopPropagation();$('warn').classList.toggle('full')};
+$('sheetCancel').onclick=closeSheet; $('sheetDim').onclick=closeSheet;
+$('sheetSave').onclick=()=>{ closeSheet(); saveRecord(); };
 
 /* ---------- 결과 수정 기록: 되돌리기 / 처음으로 ---------- */
 let edits=[];
@@ -912,7 +980,7 @@ video.addEventListener('pointerdown',e=>{
   clearTimeout(pressT);
   pressT=setTimeout(()=>{                                // 길게 누름: 실시간에서 그 약으로 고정
     pressT=0; if(!live||!live.fw) return;
-    const r=video.getBoundingClientRect();
+    const r=fitRect(video,video.videoWidth,video.videoHeight);
     live.seed={x:Math.round((pressXY.x-r.left)*live.fw/r.width),y:Math.round((pressXY.y-r.top)*live.fh/r.height)};
     live.auto=false; showFocusRing(pressXY.x,pressXY.y); toast('누른 약과 같은 약만 셉니다');
   },550);
@@ -920,7 +988,7 @@ video.addEventListener('pointerdown',e=>{
 video.addEventListener('pointerup',async e=>{
   if(!pressT) return;                                    // 길게 누른 경우는 이미 처리됨
   clearTimeout(pressT); pressT=0;
-  const r=video.getBoundingClientRect();
+  const r=fitRect(video,video.videoWidth,video.videoHeight);
   showFocusRing(e.clientX,e.clientY);
   const ok=await focusAt((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
   if(!ok&&!focusAt.warned){ focusAt.warned=1; toast('이 기기는 자동 초점만 지원합니다'); }
@@ -929,7 +997,7 @@ video.addEventListener('pointercancel',()=>{clearTimeout(pressT);pressT=0});
 video.addEventListener('contextmenu',e=>e.preventDefault());
 /* ---------- 테두리 그려서 기준 지정 (자석처럼 실제 테두리에 맞춤) ---------- */
 let lasso=null;
-const toImg=e=>{const r=view.getBoundingClientRect();return {x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}};
+const toImg=e=>{const r=fitRect(view,W,H);return {x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}};
 view.addEventListener('pointerdown',e=>{
   if(!($('s2').classList.contains('active')&&!result)) return;   // 직접 선택 화면에서만
   lasso={pts:[toImg(e)]}; view.setPointerCapture(e.pointerId);
@@ -993,7 +1061,7 @@ function snapLasso(poly){
 
 view.addEventListener('click',e=>{
   if(view.dataset.skipClick){ delete view.dataset.skipClick; return; }
-  const r=view.getBoundingClientRect();
+  const r=fitRect(view,W,H);
   const x=Math.round((e.clientX-r.left)*W/r.width), y=Math.round((e.clientY-r.top)*H/r.height);
   if($('s2').classList.contains('active')&&!result){ seed={x,y}; manual=[]; run(false); return; }
   if(!result) return;
@@ -1151,7 +1219,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='4.9';
+const APP_VERSION='5.0';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){
