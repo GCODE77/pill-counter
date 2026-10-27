@@ -1,5 +1,5 @@
 {
-  "version": "5.0",
-  "notes": "스크롤 없이 한 화면에 다 보이도록 계수 화면 재배치",
+  "version": "5.1",
+  "notes": "초광각 대신 일반 1배 후면 카메라를 사용",
   "files": ["index.html", "engine.js", "manifest.webmanifest"]
 }
