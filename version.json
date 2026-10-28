@@ -1,5 +1,5 @@
 {
-  "version": "5.6",
-  "notes": "가까이 찍은 약 2개도 자동 인식, 흰 약 + 연한 바닥에서 터치·테두리 지정도 동작",
-  "files": ["index.html", "engine.js", "manifest.webmanifest", "sw.js"]
+  "version": "5.7",
+  "notes": "새 컬러 앱 아이콘(스캔 프레임 + 캡슐)",
+  "files": ["index.html", "engine.js", "manifest.webmanifest", "sw.js", "icons/icon-192.png", "icons/icon-512.png"]
 }
