@@ -1,5 +1,5 @@
 {
-  "version": "5.5",
-  "notes": "흰 약을 연한 바닥(나무·종이)에 놓아도 자동으로 셈 (밝기 대비 인식)",
+  "version": "5.6",
+  "notes": "가까이 찍은 약 2개도 자동 인식, 흰 약 + 연한 바닥에서 터치·테두리 지정도 동작",
   "files": ["index.html", "engine.js", "manifest.webmanifest", "sw.js"]
 }

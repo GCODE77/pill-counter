@@ -447,7 +447,7 @@
   <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><div class="hd-act">
     <button class="hd-btn hidden" id="installBtn" aria-label="앱 설치"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19h14"/></svg><span>앱 설치</span></button>
     <button class="hd-btn icon hidden" id="fsBtn" aria-label="전체화면"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path id="fsIc" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-    <small class="ver">v5.5</small></div></header>
+    <small class="ver">v5.6</small></div></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -700,7 +700,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=5.5');
+  engine=new Worker('engine.js?v=5.6');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -1139,7 +1139,7 @@ function snapLasso(poly){
   const bw=x1-x0+1,bh=y1-y0+1,m=new Uint8Array(bw*bh),cols=new Float32Array(bw*bh*3);
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){ if(!inside(x+0.5,y+0.5))continue; const c=lab(y*W+x),k=(y-y0)*bw+(x-x0);
     cols[k*3]=c[0];cols[k*3+1]=c[1];cols[k*3+2]=c[2];
-    if(Math.hypot((c[0]-bl)*0.5,c[1]-ba,c[2]-bb)>14) m[k]=1; }
+    if(Math.hypot((c[0]-bl)*0.8,c[1]-ba,c[2]-bb)>13) m[k]=1; }   // 밝기 차이도 충분히 반영 (흰 약 + 연한 바닥)
   // 가장 큰 덩어리 = 지정한 물체
   const seen=new Uint8Array(bw*bh); let best=[];
   for(let s0=0;s0<bw*bh;s0++){ if(!m[s0]||seen[s0])continue; const st=[s0],px=[];seen[s0]=1;
@@ -1325,7 +1325,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='5.5';
+const APP_VERSION='5.6';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){

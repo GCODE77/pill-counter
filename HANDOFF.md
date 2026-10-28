@@ -96,6 +96,7 @@ python -m http.server 8765
 | `samples/parts3b.png` (실제, 링 부품 3, 2개 맞닿음) | 자동 3 / 어느 것을 그려도 3 |
 | `samples/parts3.png` (링 부품 3) | 자동은 안내만 / 그리면 3 |
 | `samples/caps.png` (실제, 흰 캡슐 13, 연한 나무 책상·반사) | 3차(밝기 대비)로 9 + 저대비 안내 (반사 위 캡슐은 한계) |
+| `samples/caps2.png` (실제, 흰 캡슐 2, 나무 책상 근접) | 자동 2 / 터치 2 |
 | `samples/phone1.jpg` (앱 화면 캡처) | 없음 |
 | `samples/1.png`, `samples/3.png` (예시 사진, 정답 모름) | 67 / 79 근처 유지 |
 

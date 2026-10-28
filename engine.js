@@ -1,5 +1,5 @@
 /* 필카운터 계수 엔진 — 화면과 분리된 백그라운드 작업(Web Worker)에서 실행 */
-let W=0,H=0,lab=null,photo=null,seed=null,TOL=20,HINT=null,BMAP=null;   // BMAP: 주변 바닥보다 얼마나 밝은지(밝기 대비 지도)   // HINT: 손으로 테두리를 그려 지정한 기준 물체 {L,A,B,area}
+let W=0,H=0,lab=null,photo=null,seed=null,TOL=20,HINT=null,BMAP=null,BTHR=0;   // BMAP: 주변 바닥보다 얼마나 밝은지(밝기 대비 지도)   // HINT: 손으로 테두리를 그려 지정한 기준 물체 {L,A,B,area}
 
 /* ---------- 색 변환 (sRGB → Lab) ---------- */
 function toLab(d){
@@ -321,6 +321,7 @@ function autoBright(){
   let wB=0,sB=0,best=0,thr=0; for(let i=0;i<=100;i++){ wB+=hist[i]; if(!wB) continue; const wF=N-wB; if(!wF) break; sB+=i*hist[i];
     const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)**2; if(v>best){best=v;thr=i} }
   thr=Math.max(6,thr-20+0.5);
+  BTHR=thr;
   let fg=new Uint8Array(N); for(let i=0;i<N;i++) if(t[i]>thr) fg[i]=1;
   fg=dilate(erode(fg)); fg=fillSmallHoles(fg,Math.max(12,N*0.0002));
   const {blobs}=label(fg), cand=[];
@@ -335,7 +336,8 @@ function autoBright(){
   let pick=null,bs=0;
   cand.forEach(c=>{
     let sim=0; for(const o of cand) if(o!==c&&o.n>c.n*0.75&&o.n<c.n*1.33&&o.shape.len>c.shape.len*0.8&&o.shape.len<c.shape.len*1.25) sim++;
-    if(sim<2) return;
+    if(sim<1) return;
+    if(sim<2&&c.n<N*0.004) return;                    // 2개뿐이면 가까이 찍은 큼직한 물체일 때만 (작은 얼룩 2개를 약으로 보지 않게)
     const sc=sim-c.rough*0.3; if(sc>bs){bs=sc;pick=c}
   });
   if(!pick) return null;
@@ -509,7 +511,7 @@ self.onmessage=e=>{
     W=m.w; H=m.h; TOL=m.tol; HINT=m.hint||null; BMAP=null;
     photo={data:new Uint8ClampedArray(m.buf)}; lab=toLab(photo.data);
     let s=m.seed, r=null, few=false;
-    const valid=r=>{const c=r.pts.filter(p=>p.type!=='제외').length; return c>=2&&(r.singles||0)>=(few?2:3)&&(HINT&&HINT.bright?c<=HINT.n*2+4:(r.contrast||0)>=14)};
+    const valid=r=>{const c=r.pts.filter(p=>p.type!=='제외').length; return c>=2&&(r.singles||0)>=(few||(HINT&&HINT.bright&&HINT.n<3)?2:3)&&(HINT&&HINT.bright?c<=HINT.n*2+4:(r.contrast||0)>=14)};
     if(m.auto||!s){
       s=autoSeed();
       if(s){ seed=s; r=count(); }
@@ -524,7 +526,17 @@ self.onmessage=e=>{
         if(b){ few=false; s=b.seed; seed=s; HINT=b.hint; r=count(); if(r.stat) r.stat.저대비=1; }
       }
       if(!s||!r||!valid(r)){ self.postMessage({id:m.id,none:true}); return; }
-    }else{ seed=s; r=count(); }
+    }else{
+      seed=s; r=count();
+      // 직접 지정(테두리·터치)인데 색으로 구분이 안 되면(흰 약 + 연한 바닥) 밝기 대비로 다시
+      const b0=valid(r)?null:autoBright();
+      if(!valid(r)&&(HINT||b0)){
+        const b=b0, h0=HINT;
+        HINT=Object.assign({},HINT||{},{bright:BTHR||8,n:99});
+        if(!h0&&b){ HINT.area=b.hint.area; HINT.len=b.hint.len; HINT.wid=b.hint.wid; HINT.L=b.hint.L; HINT.A=b.hint.A; HINT.B=b.hint.B; }
+        const r2=count(); if(r2.pts&&r2.pts.length&&(!r.pts||r2.singles>=(r.singles||0))){ r=r2; if(r.stat) r.stat.저대비=1; }
+      }
+    }
     self.postMessage({id:m.id,seed:s,pts:r.pts,stat:r.stat||{},r:r.r,mask:r.mask},[r.mask.buffer]);
   }catch(err){ self.postMessage({id:m.id,none:true,error:String(err)}); }
 };
