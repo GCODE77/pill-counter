@@ -447,7 +447,7 @@
   <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><div class="hd-act">
     <button class="hd-btn hidden" id="installBtn" aria-label="앱 설치"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19h14"/></svg><span>앱 설치</span></button>
     <button class="hd-btn icon hidden" id="fsBtn" aria-label="전체화면"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path id="fsIc" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-    <small class="ver">v5.4</small></div></header>
+    <small class="ver">v5.5</small></div></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -700,7 +700,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=5.4');
+  engine=new Worker('engine.js?v=5.5');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -1235,9 +1235,9 @@ function renderStat(){
   const chips=Object.entries(st).filter(([,v])=>v).map(([k,v])=>`<span class="chip"><i class="dot" style="background:${TYPE_COLOR[k]}"></i>${k} <b>${v}</b></span>`);
   if(manual.length) chips.push(`<span class="chip"><i class="dot" style="background:#fff"></i>직접 추가 <b>${manual.length}</b></span>`);
   $('stat').innerHTML=chips.join('');
-  const warn=st.겹침, glare=(result.stat&&result.stat.반사)||0;
-  $('warn').style.display=(warn||glare)?'block':'none';
-  $('warn').innerHTML=[glare?`<b>빛 반사</b>가 있는 곳의 약은 일부 빠졌을 수 있습니다. 반사가 없는 각도로 다시 찍거나, 빠진 약을 터치해 추가하세요.`:'',warn?`겹친 약 <b>${warn}개</b>는 추정값입니다. 표시를 확인해 주세요.`:''].filter(Boolean).join('<br>');
+  const warn=st.겹침, glare=(result.stat&&result.stat.반사)||0, low=(result.stat&&result.stat.저대비)||0;
+  $('warn').style.display=(warn||glare||low)?'block':'none';
+  $('warn').innerHTML=[low?`<b>바닥이 약과 비슷한 색</b>이라 일부가 빠졌을 수 있습니다. 어두운 바닥(검은 쟁반·천)에 놓고 찍으면 정확합니다. 빠진 약은 터치해 추가하세요.`:'',glare?`<b>빛 반사</b>가 있는 곳의 약은 일부 빠졌을 수 있습니다. 반사가 없는 각도로 다시 찍거나, 빠진 약을 터치해 추가하세요.`:'',warn?`겹친 약 <b>${warn}개</b>는 추정값입니다. 표시를 확인해 주세요.`:''].filter(Boolean).join('<br>');
 }
 
 /* ---------- 기록 (이 기기 localStorage에 저장) ---------- */
@@ -1325,7 +1325,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='5.4';
+const APP_VERSION='5.5';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){

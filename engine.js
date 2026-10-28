@@ -1,5 +1,5 @@
 /* 필카운터 계수 엔진 — 화면과 분리된 백그라운드 작업(Web Worker)에서 실행 */
-let W=0,H=0,lab=null,photo=null,seed=null,TOL=20,HINT=null;   // HINT: 손으로 테두리를 그려 지정한 기준 물체 {L,A,B,area}
+let W=0,H=0,lab=null,photo=null,seed=null,TOL=20,HINT=null,BMAP=null;   // BMAP: 주변 바닥보다 얼마나 밝은지(밝기 대비 지도)   // HINT: 손으로 테두리를 그려 지정한 기준 물체 {L,A,B,area}
 
 /* ---------- 색 변환 (sRGB → Lab) ---------- */
 function toLab(d){
@@ -53,6 +53,8 @@ function count(){
   th=Math.max(th,10)*(T/20);
   let mask=new Uint8Array(N);
   for(let i=0;i<N;i++) if(dmap[i]<th) mask[i]=1;
+  // 밝기 대비 방식(흰 약 + 연한 바닥처럼 색이 거의 같을 때): '그 자리 바닥보다 확실히 밝은 곳'을 약으로
+  if(HINT&&HINT.bright){ const t=BMAP||(BMAP=brightMap()); for(let i=0;i<N;i++) mask[i]=t[i]>HINT.bright?1:0; }
   // 3) 빛 반사 보정: 약 위의 하얗게 번쩍이는 부분(밝고 색이 빠진 픽셀)은
   //    약에 붙어 있을 때만 약으로 채움 → 반사 때문에 한 알이 둘로 쪼개져 세지는 것 방지
   const C0=Math.hypot(A,B);
@@ -200,7 +202,7 @@ function count(){
   });
   // 물체가 주변과 뚜렷이 구분되는지(대비): 덩어리 바로 바깥 테두리의 평균색과 기준색 차이
   let rl=0,ra=0,rb=0,rn=0; { const d3=dilate(dilate(dilate(mask))); for(let i=0;i<N;i+=2) if(d3[i]&&!mask[i]){rl+=lab[i*3];ra+=lab[i*3+1];rb+=lab[i*3+2];rn++} }
-  const contrast=rn?Math.hypot((rl/rn-L)*0.5,ra/rn-A,rb/rn-B):0;
+  const contrast=rn?(HINT&&HINT.bright?Math.abs(rl/rn-L):Math.hypot((rl/rn-L)*0.5,ra/rn-A,rb/rn-B)):0;
   return {pts,stat,r:r0*1.6,mask,contrast,singles:stat.단독+stat.붙음};   // 기준과 같은 크기로 확인된 알 수
 }
 
@@ -280,6 +282,70 @@ function autoFewObjects(){
   if(!res) return null;
   const h=res.hint; h.area/=k*k; h.len/=k; h.wid/=k;
   return {seed:{x:Math.min(W-1,Math.round(res.x/k)),y:Math.min(H-1,Math.round(res.y/k))},hint:h};
+}
+/* 밝기 대비 지도: 각 픽셀이 '그 자리 바닥 밝기'보다 얼마나 밝은지
+   바닥 밝기 = 물체보다 넓은 창으로 최솟값→최댓값(물체를 지운 밝기)을 구해 부드럽게 한 것 → 조명이 고르지 않아도 됨 */
+function brightMap(){
+  const k=Math.min(1,240/Math.max(W,H)), sw=Math.round(W*k), sh=Math.round(H*k);
+  let s=new Float32Array(sw*sh);
+  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++) s[y*sw+x]=lab[((Math.min(H-1,y/k|0))*W+Math.min(W-1,x/k|0))*3];
+  // 바닥 밝기: 넓은 창의 평균인데, 바닥과 많이 다른 픽셀(약·그림자)은 빼고 다시 평균 — 3번 반복
+  const R=Math.max(6,Math.round(Math.max(sw,sh)/12));
+  const blurW=(v,w)=>{ const I=new Float64Array((sw+1)*(sh+1)), J=new Float64Array((sw+1)*(sh+1));
+    for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const q=(y+1)*(sw+1)+x+1;I[q]=v[y*sw+x]*w[y*sw+x]+I[q-1]+I[q-sw-1]-I[q-sw-2];J[q]=w[y*sw+x]+J[q-1]+J[q-sw-1]-J[q-sw-2]}
+    const o=new Float32Array(sw*sh);
+    for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const x0=Math.max(0,x-R),x1=Math.min(sw,x+R+1),y0=Math.max(0,y-R),y1=Math.min(sh,y+R+1);
+      const A=(y1*(sw+1)+x1),B=(y0*(sw+1)+x1),C=(y1*(sw+1)+x0),D=(y0*(sw+1)+x0),ws=J[A]-J[B]-J[C]+J[D];
+      o[y*sw+x]=ws>0.5?(I[A]-I[B]-I[C]+I[D])/ws:NaN}
+    return o; };
+  const wt=new Float32Array(sw*sh).fill(1);
+  let bg=blurW(s,wt);
+  for(let it=0;it<5;it++){
+    for(let i=0;i<sw*sh;i++){const d=s[i]-bg[i]; wt[i]=d<(it<2?2:6)&&d>-14?1:0;}   // 처음엔 평균보다 밝은 것(약)을 모두 빼서 바닥만 남김
+    const nb=blurW(s,wt); for(let i=0;i<sw*sh;i++) if(nb[i]===nb[i]) bg[i]=nb[i];
+  }
+  const t=new Float32Array(W*H);
+  for(let y=0;y<H;y++){ const fy=Math.min(sh-1.001,y*k), y0=fy|0, wy=fy-y0;
+    for(let x=0;x<W;x++){ const fx=Math.min(sw-1.001,x*k), x0=fx|0, wx=fx-x0, i=y0*sw+x0, j=Math.min(sh-1,y0+1)*sw+x0, x1=Math.min(1,sw-1-x0);
+      const b=(bg[i]*(1-wx)+bg[i+x1]*wx)*(1-wy)+(bg[j]*(1-wx)+bg[j+x1]*wx)*wy;
+      t[y*W+x]=lab[(y*W+x)*3]-b; } }
+  return t;
+}
+/* 세 번째 자동 방법: 흰 약을 연한 바닥(나무·종이)에 놓아 색으로는 구분이 안 될 때
+   '주변보다 확실히 밝고, 같은 크기·모양으로 3개 이상 반복되는 물체'를 찾음 → {seed, hint} */
+function autoBright(){
+  const N=W*H, t=BMAP||(BMAP=brightMap());
+  // 경계값: 밝기 대비 분포를 둘로 가르는 값(오츠 방법)
+  const hist=new Float64Array(101); for(let i=0;i<N;i++) hist[Math.max(0,Math.min(100,(t[i]+20)|0))]++;
+  let sum=0; for(let i=0;i<=100;i++) sum+=i*hist[i];
+  let wB=0,sB=0,best=0,thr=0; for(let i=0;i<=100;i++){ wB+=hist[i]; if(!wB) continue; const wF=N-wB; if(!wF) break; sB+=i*hist[i];
+    const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)**2; if(v>best){best=v;thr=i} }
+  thr=Math.max(6,thr-20+0.5);
+  let fg=new Uint8Array(N); for(let i=0;i<N;i++) if(t[i]>thr) fg[i]=1;
+  fg=dilate(erode(fg)); fg=fillSmallHoles(fg,Math.max(12,N*0.0002));
+  const {blobs}=label(fg), cand=[];
+  blobs.forEach(px=>{
+    if(px.length<N*0.0008||px.length>N*0.08) return;
+    let edge=0,touch=false; for(const p of px){const x=p%W; if(x<1||p<W||x>W-2||p>=N-W){touch=true;break} if(!fg[p-1]||!fg[p+1]||!fg[p-W]||!fg[p+W])edge++}
+    if(touch) return;
+    const rough=edge*edge/(4*Math.PI*px.length); if(rough>2.4) return;
+    let mt=0; for(const p of px) mt+=t[p]; if(mt/px.length<thr+4) return;   // 주변보다 뚜렷이 밝은 것만 (나뭇결·얼룩 제외)
+    cand.push({px,n:px.length,rough,shape:pca(px)});
+  });
+  let pick=null,bs=0;
+  cand.forEach(c=>{
+    let sim=0; for(const o of cand) if(o!==c&&o.n>c.n*0.75&&o.n<c.n*1.33&&o.shape.len>c.shape.len*0.8&&o.shape.len<c.shape.len*1.25) sim++;
+    if(sim<2) return;
+    const sc=sim-c.rough*0.3; if(sc>bs){bs=sc;pick=c}
+  });
+  if(!pick) return null;
+  // 같은 물체들의 중앙값을 기준 크기·모양으로
+  const same=cand.filter(o=>o.n>pick.n*0.75&&o.n<pick.n*1.33&&o.shape.len>pick.shape.len*0.8&&o.shape.len<pick.shape.len*1.25);
+  const med=f=>{const v=same.map(f).sort((a,b)=>a-b);return v[v.length>>1]};
+  let sl=0,sa=0,sb=0; pick.px.forEach(p=>{sl+=lab[p*3];sa+=lab[p*3+1];sb+=lab[p*3+2]});
+  let cur=new Set(pick.px),last=pick.px; for(let it=0;it<60;it++){const nx=[];for(const p of cur) if(cur.has(p-1)&&cur.has(p+1)&&cur.has(p-W)&&cur.has(p+W)) nx.push(p); if(!nx.length)break; last=nx; cur=new Set(nx);}
+  const sp=last[(last.length/2)|0], n=pick.px.length;
+  return {seed:{x:sp%W,y:(sp/W)|0},hint:{L:sl/n,A:sa/n,B:sb/n,area:med(o=>o.n),len:med(o=>o.shape.len),wid:med(o=>o.shape.wid),bright:thr,n:same.length}};
 }
 function autoSeedCore(){
   const N=W*H, Q=12;
@@ -440,10 +506,10 @@ function kmeans(px,k){
 self.onmessage=e=>{
   const m=e.data;
   try{
-    W=m.w; H=m.h; TOL=m.tol; HINT=m.hint||null;
+    W=m.w; H=m.h; TOL=m.tol; HINT=m.hint||null; BMAP=null;
     photo={data:new Uint8ClampedArray(m.buf)}; lab=toLab(photo.data);
     let s=m.seed, r=null, few=false;
-    const valid=r=>{const c=r.pts.filter(p=>p.type!=='제외').length; return c>=2&&(r.singles||0)>=(few?2:3)&&(r.contrast||0)>=14};
+    const valid=r=>{const c=r.pts.filter(p=>p.type!=='제외').length; return c>=2&&(r.singles||0)>=(few?2:3)&&(HINT&&HINT.bright?c<=HINT.n*2+4:(r.contrast||0)>=14)};
     if(m.auto||!s){
       s=autoSeed();
       if(s){ seed=s; r=count(); }
@@ -451,6 +517,11 @@ self.onmessage=e=>{
       if(!s||!valid(r)){
         const f=autoFewObjects();
         if(f){ few=true; s=f.seed; seed=s; HINT=f.hint; r=count(); }
+      }
+      // 2차도 실패하면: 흰 약 + 연한 바닥(색이 거의 같음) → 밝기 대비로 3차 자동
+      if(!s||!r||!valid(r)){
+        const b=autoBright();
+        if(b){ few=false; s=b.seed; seed=s; HINT=b.hint; r=count(); if(r.stat) r.stat.저대비=1; }
       }
       if(!s||!r||!valid(r)){ self.postMessage({id:m.id,none:true}); return; }
     }else{ seed=s; r=count(); }

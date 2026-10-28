@@ -1,5 +1,5 @@
 {
-  "version": "5.4",
-  "notes": "앱 설치(홈 화면에 추가)와 전체화면 버튼 추가, 업데이트 알림 오류 수정",
+  "version": "5.5",
+  "notes": "흰 약을 연한 바닥(나무·종이)에 놓아도 자동으로 셈 (밝기 대비 인식)",
   "files": ["index.html", "engine.js", "manifest.webmanifest", "sw.js"]
 }
