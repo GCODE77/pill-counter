@@ -1761,8 +1761,14 @@ function scanToCountName(){
 
 /* ---------- 약품명 검색 (식약처 의약품 제품 허가정보, 이 기기에 저장한 인증키 사용) ---------- */
 const API_KEY='pc.apikey', API_URL='https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService08/getDrugPrdtPrmsnInq08';
+const PROXY_URL='';   // 중계 서버(Cloudflare Worker) 주소. 채워 두면 인증키 없이도 약품명 검색 가능 (worker/README.md)
 const getKey=()=>(localStorage.getItem(API_KEY)||'').trim();
+const canLookup=()=>!!(getKey()||PROXY_URL);
 async function fetchDrugNames(q,rows){
+  if(!getKey()&&PROXY_URL){                                                                // 기기에 키가 없으면 중계 서버로
+    let r,j; try{ r=await fetch(`${PROXY_URL}?q=${encodeURIComponent(q)}`); j=await r.json(); }catch(e){ throw new Error('서버에 연결하지 못했습니다'); }
+    if(j.error) throw new Error(j.error); return j;
+  }
   const raw=getKey(), key=/%[0-9a-f]{2}/i.test(raw)?decodeURIComponent(raw):raw;       // 인코딩된 키·디코딩된 키 모두 허용
   const r=await fetch(`${API_URL}?serviceKey=${encodeURIComponent(key)}&type=json&pageNo=1&numOfRows=${rows||30}&item_name=${encodeURIComponent(q)}`);
   let j; try{ j=await r.json(); }catch(e){ throw new Error(r.status===403||r.status===401?'인증키가 올바르지 않거나 아직 승인 전입니다':'응답을 읽을 수 없습니다'); }
@@ -1775,7 +1781,7 @@ async function fetchDrugNames(q,rows){
 let pickCb=null;
 function openPick(initial,cb){
   pickCb=cb; $('pick').style.display='flex'; $('pickQ').value=initial||'';
-  if(!getKey()){ $('pickList').innerHTML='<li class="msg">약품명 검색을 쓰려면 인증키가 필요합니다.<br><b>더보기 → 약품명 검색 연결</b>에서 등록하세요.</li>'; return; }
+  if(!canLookup()){ $('pickList').innerHTML='<li class="msg">약품명 검색을 쓰려면 인증키가 필요합니다.<br><b>더보기 → 약품명 검색 연결</b>에서 등록하세요.</li>'; return; }
   $('pickList').innerHTML='<li class="msg">약 이름을 입력하고 검색을 누르세요</li>';
   if(initial&&initial.trim()) runPick(); else setTimeout(()=>$('pickQ').focus(),50);
 }
@@ -1802,7 +1808,7 @@ function renderBackupInfo(){
   $('backupInfo').innerHTML=`기록 <b>${recs.length}</b>건 · 재고 <b>${inv.length}</b>종 · 약 ${MB<0.1?'0.1 미만':MB.toFixed(1)}MB<br>마지막 백업: <b>${last?(days===0?'오늘':days+'일 전'):'없음'}</b>`;
   const need=(recs.length||inv.length)&&(days===null||days>=14);
   document.querySelector('nav.tabs button[data-pg=pgHelp]').classList.toggle('dot',!!need);   // 14일 넘게 백업이 없으면 탭에 빨간 점
-  $('keyInfo').innerHTML=getKey()?'인증키 <b>등록됨</b>':'인증키 <b>없음</b>';
+  $('keyInfo').innerHTML=getKey()?'인증키 <b>등록됨</b> (이 기기의 키를 사용)':PROXY_URL?'<b>기본 연결 사용 중</b> · 키를 넣지 않아도 검색됩니다':'인증키 <b>없음</b>';
 }
 $('bkSave').onclick=()=>{
   const data={app:'pillcounter',version:1,date:new Date().toISOString(),records:loadRecs(),inventory:loadInv(),codes:loadCodes()};

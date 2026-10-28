@@ -71,6 +71,7 @@
 ### 백업·검색·확대 (v5.9)
 - 더보기 탭 `#dataCard`: `bkSave`(JSON 저장: `{app:'pillcounter',version:1,records,inventory,codes}`) / `bkFile`(불러오기: 기록은 id, 재고는 id 또는 이름이 같으면 이력·바코드 합침) / 인증키 입력
 - 약품명 검색 `fetchDrugNames()`: 식약처 `DrugPrdtPrmsnInfoService08/getDrugPrdtPrmsnInq08`에 `item_name`으로 검색(**바코드로 찾는 파라미터는 없음**). 응답 형태는 공식 명세 기준이며 실제 인증키로 성공 응답은 확인하지 못했음(잘못된 키 오류 응답과 CORS 허용만 확인). 키는 인코딩/디코딩 형태 모두 받음
+- 중계 서버: `worker/drug-proxy.js`(Cloudflare Worker, 키는 비밀 변수 `DRUG_KEY`). 배포 후 `index.html`의 `PROXY_URL`에 주소를 넣으면 기기에 키가 없어도 검색됨(지금은 빈 값 = 미배포). 절차는 `worker/README.md`
 - 결과 확대 `zm`(배율·이동): `view`에 CSS transform. 좌표 변환은 `fitRect(view,W,H)`가 변형된 사각형을 그대로 읽으므로 그대로 동작. 확대·이동 직후의 click은 `view._noClick` 시간으로 무시
 
 ## 4. 개발·테스트 방법
