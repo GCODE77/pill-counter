@@ -1,5 +1,5 @@
 {
-  "version": "5.8",
-  "notes": "기록에 원본 사진 저장, 상세에서 개수 표시 켜고 끄기",
+  "version": "5.9",
+  "notes": "데이터 백업, 기록 엑셀, 결과 확대, 약품명 검색, 새 색상",
   "files": ["index.html", "engine.js", "manifest.webmanifest", "sw.js", "icons/icon-192.png", "icons/icon-512.png"]
 }
