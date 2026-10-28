@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>필카운터</title>
 <meta name="theme-color" content="#06070b">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="author" content="GLORY KIM">
 <meta name="copyright" content="© GLORY KIM. All rights reserved.">
 <meta name="description" content="필카운터 — 카메라로 같은 약을 자동으로 세는 앱">
@@ -416,6 +417,20 @@
   .sheet-actions{display:flex;gap:8px;margin-top:12px}
   .sheet-actions button{min-height:46px}
   .sheet-actions .cta{flex:1.6}
+  /* v5.4 — 머리줄 버튼: 앱 설치 · 전체화면 */
+  .hd-act{display:flex;align-items:center;gap:6px;flex:none}
+  .hd-btn{flex:none;min-height:30px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;gap:4px;
+    background:rgba(255,255,255,.05);color:#e9e6de;border:1px solid var(--hair2)}
+  .hd-btn .ic{width:15px;height:15px}
+  .hd-btn.icon{padding:4px 7px}
+  #installBtn{border-color:rgba(226,196,126,.5);color:var(--g1)}
+  .install-help{position:fixed;inset:0;z-index:60;display:none;place-items:end center;background:rgba(3,4,8,.6);backdrop-filter:blur(3px)}
+  .install-help.show{display:grid}
+  .install-help .box{width:100%;max-width:480px;margin:0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;
+    background:linear-gradient(180deg,#171b2a,#10131d);border-top:1px solid rgba(226,196,126,.35)}
+  .install-help h3{margin:0 0 10px;font-size:17px}
+  .install-help ol{margin:0 0 14px;padding-left:20px;line-height:1.7;font-size:14.5px;color:#d9d5cb}
+  .install-help button{width:100%}
 </style>
 </head>
 <body data-pg="pgCount">
@@ -429,7 +444,10 @@
   </div>
 </div>
 <div class="app">
-  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><small class="ver">v5.3</small></header>
+  <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><div class="hd-act">
+    <button class="hd-btn hidden" id="installBtn" aria-label="앱 설치"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19h14"/></svg><span>앱 설치</span></button>
+    <button class="hd-btn icon hidden" id="fsBtn" aria-label="전체화면"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path id="fsIc" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <small class="ver">v5.4</small></div></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -627,6 +645,11 @@
   </section>
 </div>
 
+<div class="install-help" id="installHelp"><div class="box">
+  <h3>필카운터를 앱으로 설치하기</h3>
+  <ol id="installSteps"></ol>
+  <button class="primary" id="installOk">확인</button>
+</div></div>
 <footer class="copyright">© GLORY KIM</footer>
 <nav class="tabs">
   <button class="on" data-pg="pgCount"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-2h5.2l1.3 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.5"/></svg>계수</button>
@@ -677,7 +700,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=5.3');
+  engine=new Worker('engine.js?v=5.4');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -1302,7 +1325,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='5.3';
+const APP_VERSION='5.4';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){
@@ -1331,6 +1354,42 @@ $('uBtn').onclick=async()=>{
 checkUpdate();
 setInterval(checkUpdate,30*60*1000);                       // 켜 둔 동안 30분마다
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(); });
+
+/* ---------- 앱 설치 (홈 화면에 추가) ---------- */
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone===true;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+let installEvt=null;
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; renderInstall(); });
+window.addEventListener('appinstalled',()=>{ installEvt=null; renderInstall(); toast('설치되었습니다 · 홈 화면의 필카운터 아이콘으로 여세요'); });
+function renderInstall(){ $('installBtn').classList.toggle('hidden',isStandalone()||!(installEvt||isIOS||/android/i.test(navigator.userAgent))); }
+$('installBtn').onclick=async()=>{
+  if(installEvt){ installEvt.prompt(); const r=await installEvt.userChoice.catch(()=>null); if(r&&r.outcome==='accepted') installEvt=null; renderInstall(); return; }
+  $('installSteps').innerHTML=isIOS
+    ?'<li><b>Safari</b>로 이 페이지를 엽니다</li><li>아래쪽 <b>공유 버튼</b>(네모에 위쪽 화살표)을 누릅니다</li><li><b>홈 화면에 추가</b> → <b>추가</b>를 누릅니다</li>'
+    :'<li><b>Chrome</b>으로 이 페이지를 엽니다</li><li>오른쪽 위 <b>⋮ 메뉴</b>를 누릅니다</li><li><b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 누릅니다</li>';
+  $('installHelp').classList.add('show');
+};
+$('installOk').onclick=()=>$('installHelp').classList.remove('show');
+$('installHelp').onclick=e=>{ if(e.target.id==='installHelp') $('installHelp').classList.remove('show'); };
+renderInstall();
+
+/* ---------- 전체화면 ---------- */
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+const fsOk=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+function renderFs(){
+  $('fsBtn').classList.toggle('hidden',!fsOk);
+  $('fsIc').setAttribute('d',fsEl()?'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5':'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5');
+  $('fsBtn').setAttribute('aria-label',fsEl()?'전체화면 끝내기':'전체화면');
+}
+$('fsBtn').onclick=async()=>{
+  try{
+    if(fsEl()) await (document.exitFullscreen||document.webkitExitFullscreen).call(document);
+    else{ const d=document.documentElement; await (d.requestFullscreen||d.webkitRequestFullscreen).call(d,{navigationUI:'hide'}); }
+  }catch(e){ toast('이 브라우저는 전체화면을 지원하지 않습니다 · 앱으로 설치하면 넓게 볼 수 있습니다'); }
+};
+document.addEventListener('fullscreenchange',renderFs); document.addEventListener('webkitfullscreenchange',renderFs);
+renderFs();
 
 const goTab=pg=>document.querySelector(`nav.tabs button[data-pg=${pg}]`).click();
 /* ---------- 재고 관리 (병·PTP 등 포장 단위 + 낱알) ---------- */

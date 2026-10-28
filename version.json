@@ -1,5 +1,5 @@
 {
-  "version": "5.3",
-  "notes": "렌즈 바꾸기에서 "그 카메라를 열 수 없습니다" 오류 수정, 기본 1배 카메라 자동 선택 개선",
-  "files": ["index.html", "engine.js", "manifest.webmanifest"]
+  "version": "5.4",
+  "notes": "앱 설치(홈 화면에 추가)와 전체화면 버튼 추가, 업데이트 알림 오류 수정",
+  "files": ["index.html", "engine.js", "manifest.webmanifest", "sw.js"]
 }

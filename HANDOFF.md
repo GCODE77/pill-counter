@@ -30,6 +30,7 @@
 | `engine.js` | 계수 엔진. **Web Worker**로 돌아서 화면이 멈추지 않음 |
 | `version.json` | 최신 버전 정보. 앱이 읽어서 업데이트 알림을 띄움 |
 | `manifest.webmanifest`, `icons/` | 홈 화면 앱 설정과 아이콘 |
+| `sw.js` | 서비스 워커: 앱 설치 조건 충족 + 오프라인 실행. **네트워크 우선**이라 업데이트를 막지 않음(version.json은 캐시 안 함) |
 | `vendor/zxing.min.js` | 바코드 인식(ZXing, Apache-2.0) |
 | `README.md` / `CHANGELOG.md` | 사용자 설명 / 버전별 변경 기록 |
 | `samples/` | 테스트 사진(**.gitignore로 저장소에 올리지 않음**, 로컬에만 있음) |
@@ -102,7 +103,7 @@ python -m http.server 8765
 
 새 버전을 낼 때는 **아래 모두를 같은 번호로** 올립니다.
 1. `index.html`: `APP_VERSION`, 머리글의 `vX.Y`, `engine.js?v=X.Y`
-2. `version.json`: `version`, `notes`(알림에 보일 한 줄)
+2. `version.json`: `version`, `notes`(알림에 보일 한 줄). **notes 안에 큰따옴표(")를 쓰지 말 것** — JSON이 깨져 업데이트 알림이 멈춤(v5.3에서 발생). 저장 후 `node -e "JSON.parse(require('fs').readFileSync('version.json','utf8'))"`로 확인
 3. `CHANGELOG.md` 맨 위에 변경 내용
 4. 커밋 → `git push`(main). 1~2분 뒤 Pages에 반영되고, 사용 중인 앱에 업데이트 알림이 뜹니다.
 
