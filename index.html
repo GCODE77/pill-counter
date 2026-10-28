@@ -447,7 +447,7 @@
   <header><div class="brand"><img src="icons/icon-192.png" alt=""><div class="wordmark"><h1>필카운터</h1><span>PILL COUNTER</span></div></div><div class="hd-act">
     <button class="hd-btn hidden" id="installBtn" aria-label="앱 설치"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19h14"/></svg><span>앱 설치</span></button>
     <button class="hd-btn icon hidden" id="fsBtn" aria-label="전체화면"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path id="fsIc" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-    <small class="ver">v5.7</small></div></header>
+    <small class="ver">v5.8</small></div></header>
 
   <!-- ===== 계수 화면 ===== -->
   <section class="page" id="pgCount">
@@ -700,7 +700,7 @@ function btn(label,cls,fn,icon){const b=document.createElement('button');b.class
    무거운 계산은 engine.js(Web Worker)에서 돌려 화면이 멈추지 않게 함 */
 let engine, reqId=0; const pending=new Map();
 function startEngine(){
-  engine=new Worker('engine.js?v=5.7');
+  engine=new Worker('engine.js?v=5.8');
   engine.onmessage=e=>{const cb=pending.get(e.data.id); pending.delete(e.data.id); if(cb) cb(e.data)};
   engine.onerror=()=>{ pending.forEach(cb=>cb({none:true,error:'worker'})); pending.clear(); };
 }
@@ -1244,19 +1244,22 @@ function renderStat(){
 const KEY='pillcounter.records';
 const loadRecs=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return[]}};
 const storeRecs=r=>localStorage.setItem(KEY,JSON.stringify(r));
-function snapshot(maxSide,q){
+function snapshot(maxSide,q,original){
   const s=Math.min(1,maxSide/Math.max(W,H)),c=document.createElement('canvas');
-  c.width=Math.round(W*s);c.height=Math.round(H*s);c.getContext('2d').drawImage(view,0,0,c.width,c.height);
+  c.width=Math.round(W*s);c.height=Math.round(H*s);
+  let src=view;
+  if(original&&photo){ src=document.createElement('canvas'); src.width=W; src.height=H; src.getContext('2d').putImageData(photo,0,0); }   // 표시·어둡게 처리 전의 원본 사진
+  c.getContext('2d').drawImage(src,0,0,c.width,c.height);
   return c.toDataURL('image/jpeg',q);
 }
 function saveRecord(){
   const st={};result.pts.forEach(p=>{if(!p.off)st[p.type]=(st[p.type]||0)+1});
   if(manual.length) st['직접 추가']=manual.length;
   const rec={id:Date.now(),name:$('drugName').value.trim(),count:result.total,stat:st,
-    date:new Date().toISOString(),thumb:snapshot(160,0.7),image:snapshot(720,0.72)};
+    date:new Date().toISOString(),thumb:snapshot(160,0.7,true),image:snapshot(720,0.72,true),marked:snapshot(560,0.62)};   // 원본 + 번호 표시본
   const recs=loadRecs();recs.unshift(rec);
   // 저장 공간이 부족하면 오래된 기록의 큰 사진부터 정리
-  for(;;){try{storeRecs(recs);break}catch(e){const old=[...recs].reverse().find(r=>r.image);if(!old){toast('저장 공간이 부족합니다');return}delete old.image}}
+  for(;;){try{storeRecs(recs);break}catch(e){const old=[...recs].reverse().find(r=>r.image);if(!old){toast('저장 공간이 부족합니다');return}delete old.image;delete old.marked}}
   toast(`${rec.name||'단일 분석'} ${rec.count}개를 기록했습니다`);
   $('drugName').value='';
   renderHistory();
@@ -1286,21 +1289,24 @@ function openRecord(id){
     <h2>${esc(r.name||'단일 분석')}</h2>
     <div class="hint" style="margin:0 0 8px">${fmt(r.date)}</div>
     <div class="count-badge" style="display:block">${r.count}<span>개</span></div>
-    <img src="${r.image||r.thumb}" alt="계수 결과 사진">
+    <img id="mImg" src="${r.image||r.thumb}" alt="계수 결과 사진">
     <div class="stat">${chips}</div>
     <div class="actions">
       <button class="secondary" id="mDel">${ICON.trash}<span>삭제</span></button>
+      ${r.marked?`<button class="secondary" id="mMark">${ICON.list}<span>개수 표시</span></button>`:''}
       <button class="secondary" id="mDown">${ICON.down}<span>이미지 저장</span></button>
       <button class="primary" id="mClose">닫기</button>
     </div>`;
   $('modal').style.display='flex';
   $('mClose').onclick=closeModal;
   $('mDel').onclick=()=>{if(!confirm('이 기록을 삭제할까요?'))return;storeRecs(loadRecs().filter(x=>x.id!==id));closeModal();renderHistory();toast('삭제했습니다')};
-  $('mDown').onclick=()=>downloadRecord(r);
+  let showMark=false;
+  if(r.marked) $('mMark').onclick=()=>{ showMark=!showMark; $('mImg').src=showMark?r.marked:(r.image||r.thumb); $('mMark').querySelector('span').textContent=showMark?'원본 보기':'개수 표시'; };
+  $('mDown').onclick=()=>downloadRecord(r,showMark&&r.marked?r.marked:null);
 }
 function closeModal(){$('modal').style.display='none'}
 $('modal').onclick=e=>{if(e.target.id==='modal')closeModal()};
-function downloadRecord(r){
+function downloadRecord(r,src){
   const img=new Image();img.onload=()=>{
     const w=img.width,h=img.height,c=document.createElement('canvas');c.width=w;c.height=h+70;const g=c.getContext('2d');
     g.drawImage(img,0,0);g.fillStyle='#facc15';g.fillRect(0,h,w,70);g.fillStyle='#111';g.textBaseline='middle';
@@ -1308,7 +1314,7 @@ function downloadRecord(r){
     g.font='600 16px sans-serif';g.textAlign='right';g.fillText(fmt(r.date),w-16,h+24);
     g.font='600 12px sans-serif';g.globalAlpha=.75;g.fillText('필카운터 · © GLORY KIM',w-16,h+50);g.globalAlpha=1;
     const a=document.createElement('a');a.download=`필카운터_${r.name||'분석'}_${r.count}개.png`;a.href=c.toDataURL('image/png');a.click();
-  };img.src=r.image||r.thumb;
+  };img.src=src||r.image||r.thumb;
 }
 
 /* ---------- 탭 이동 ---------- */
@@ -1325,7 +1331,7 @@ document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
 
 /* ---------- 업데이트 확인 ----------
    GitHub에 올라간 version.json의 버전이 지금 앱보다 높으면 알림 → 누르면 새 파일을 내려받고 다시 시작 */
-const APP_VERSION='5.7';
+const APP_VERSION='5.8';
 const verNum=v=>String(v).split('.').map(n=>parseInt(n)||0).reduce((a,n)=>a*1000+n,0);
 let latest=null;
 async function checkUpdate(){

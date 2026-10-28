@@ -1,5 +1,5 @@
 {
-  "version": "5.7",
-  "notes": "새 컬러 앱 아이콘(스캔 프레임 + 캡슐)",
+  "version": "5.8",
+  "notes": "기록에 원본 사진 저장, 상세에서 개수 표시 켜고 끄기",
   "files": ["index.html", "engine.js", "manifest.webmanifest", "sw.js", "icons/icon-192.png", "icons/icon-512.png"]
 }
