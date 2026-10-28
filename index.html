@@ -1761,7 +1761,7 @@ function scanToCountName(){
 
 /* ---------- 약품명 검색 (식약처 의약품 제품 허가정보, 이 기기에 저장한 인증키 사용) ---------- */
 const API_KEY='pc.apikey', API_URL='https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService08/getDrugPrdtPrmsnInq08';
-const PROXY_URL='';   // 중계 서버(Cloudflare Worker) 주소. 채워 두면 인증키 없이도 약품명 검색 가능 (worker/README.md)
+const PROXY_URL='';   // 중계 서버(Cloudflare Worker) 주소. 채워 두면 인증키 없이도 약품명 검색 가능 (proxy/README.md (Vercel))
 const getKey=()=>(localStorage.getItem(API_KEY)||'').trim();
 const canLookup=()=>!!(getKey()||PROXY_URL);
 async function fetchDrugNames(q,rows){
