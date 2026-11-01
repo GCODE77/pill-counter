@@ -2,11 +2,29 @@
 
 다음 작업자(사람 또는 새 Claude 세션)가 이 문서만 읽고 바로 이어서 작업할 수 있도록 정리한 인수인계 문서입니다.
 
-- 최종 갱신: 2026-10-29
+- 최종 갱신: 2026-11-02
 - 현재 버전: **v5.9**
 - 배포 주소: https://gcode77.github.io/pillcounter/
 - 저장소: https://github.com/GCODE77/pillcounter (`main` → GitHub Pages)
 - 저작권: © GLORY KIM
+
+---
+
+## 0. 지금 상태 · 바로 이어서 할 일 (가장 먼저 읽기)
+
+**배포된 최신 버전은 v5.9** (커밋 `5e5e151`까지 push 완료, 작업 트리 깨끗). v5.9 내용: 데이터 백업/불러오기, 기록 엑셀(CSV), 결과 두 손가락 확대, 약품명 검색(식약처), 처음 본 바코드 이름 기억, 앱 색상을 새 아이콘(청록→남색 + 노랑)에 맞춤, 탭 이름 '더보기'.
+
+**진행 중인 일: 약품명 검색 중계 서버 (미완, 사용자 쪽 배포 대기)**
+- 목적: 식약처 인증키를 앱(공개 GitHub Pages)에 넣지 않고 서버에만 두기. 프런트엔드만으로는 키를 숨길 수 없음.
+- 준비 완료: `proxy/api/drug.js`(Vercel 함수, 환경 변수 `DRUG_KEY`, 서울 리전 `proxy/vercel.json`), 절차 `proxy/README.md`, 앱 연동 `index.html`의 `PROXY_URL`(**지금 빈 값 = 미배포**, 값이 있고 기기에 키가 없으면 중계 서버로 검색).
+- 막힌 이유: 사용자 회사 네트워크가 vercel.com(그리고 Cloudflare 가입)을 막음. **계정 가입·키 입력은 Claude가 대신 할 수 없음**(정책). 사용자가 폰 모바일 데이터나 집 PC에서 GitHub 로그인으로 가입 → 저장소 `pillcounter` Import → Root Directory `proxy` → 환경 변수 `DRUG_KEY` 입력 → Deploy 해야 함.
+- 사용자가 배포 주소(`https://….vercel.app`)를 주면 할 일: ① `PROXY_URL`을 `<주소>/api/drug`로 설정 ② 실제 검색 시험(`fetch(PROXY_URL+'?q=타이레놀')`, Origin 제한 때문에 localhost:8766 또는 gcode77.github.io 페이지에서) ③ 버전 올리고(v5.10) CHANGELOG·version.json·이 문서 갱신 → 커밋·push ④ Vercel도 안 되면 Netlify Functions·Deno Deploy 등 같은 구조로 대체 가능.
+- **대안(이미 동작)**: 중계 서버 없이 각 기기의 더보기 → '약품명 검색 연결'에 키를 직접 입력해도 됨. 사용자의 키로 `getDrugPrdtPrmsnInq08`을 호출해 성공 응답(타이레놀 7건, 필드 `ITEM_NAME`·`ENTP_NAME`)을 **확인함**. 키 값은 대화에 있었지만 저장소·코드에는 넣지 않았음(넣지 말 것). 노출이 걱정되면 data.go.kr에서 재발급.
+- 바코드(표준코드)로 직접 약품명을 찾는 무료 공공 API는 찾지 못함(허가정보 API는 품목명·업체명·보험코드로만 검색). 그래서 '한 번 이름을 붙이면 기억(`pillcounter.codes`) + 이름 검색으로 정식 품목명 선택' 구조.
+
+**사용자 선호(이번 세션에서 확인)**: 가능하면 Claude가 끝까지 자동으로 실행하기를 원함. 다만 계정 생성·비밀번호/키 입력은 정책상 직접 하도록 안내해야 함. 매 변경마다 검토 → 커밋 → push → 문서 갱신. 응답은 한국어, 쉬운 말.
+
+**아직 실기기에서 확인하지 못한 것** (PC 브라우저·가짜 입력으로만 시험함): 두 손가락 확대, 백업 파일 저장/불러오기, 앱 설치·전체화면·렌즈 전환(v5.1~5.4), 원본 사진 기록(v5.8), 회사 네트워크에서의 약품명 검색.
 
 ---
 
@@ -31,6 +49,7 @@
 | `version.json` | 최신 버전 정보. 앱이 읽어서 업데이트 알림을 띄움 |
 | `manifest.webmanifest`, `icons/` | 홈 화면 앱 설정과 아이콘 |
 | `sw.js` | 서비스 워커: 앱 설치 조건 충족 + 오프라인 실행. **네트워크 우선**이라 업데이트를 막지 않음(version.json은 캐시 안 함) |
+| `proxy/` | 약품명 검색 중계 서버(Vercel 함수, 아직 미배포). 앱 배포(GitHub Pages)와 별개 |
 | `vendor/zxing.min.js` | 바코드 인식(ZXing, Apache-2.0) |
 | `README.md` / `CHANGELOG.md` | 사용자 설명 / 버전별 변경 기록 |
 | `samples/` | 테스트 사진(**.gitignore로 저장소에 올리지 않음**, 로컬에만 있음) |
@@ -71,7 +90,7 @@
 ### 백업·검색·확대 (v5.9)
 - 더보기 탭 `#dataCard`: `bkSave`(JSON 저장: `{app:'pillcounter',version:1,records,inventory,codes}`) / `bkFile`(불러오기: 기록은 id, 재고는 id 또는 이름이 같으면 이력·바코드 합침) / 인증키 입력
 - 약품명 검색 `fetchDrugNames()`: 식약처 `DrugPrdtPrmsnInfoService08/getDrugPrdtPrmsnInq08`에 `item_name`으로 검색(**바코드로 찾는 파라미터는 없음**). 응답 형태는 공식 명세 기준이며 실제 인증키로 성공 응답은 확인하지 못했음(잘못된 키 오류 응답과 CORS 허용만 확인). 키는 인코딩/디코딩 형태 모두 받음
-- 중계 서버: `worker/drug-proxy.js`(Cloudflare Worker, 키는 비밀 변수 `DRUG_KEY`). 배포 후 `index.html`의 `PROXY_URL`에 주소를 넣으면 기기에 키가 없어도 검색됨(지금은 빈 값 = 미배포). 절차는 `proxy/README.md (Vercel)`
+- 중계 서버: `proxy/api/drug.js`(Vercel 함수, 키는 환경 변수 `DRUG_KEY`). 배포 후 `index.html`의 `PROXY_URL`에 `<주소>/api/drug`를 넣으면 기기에 키가 없어도 검색됨(지금은 빈 값 = 미배포). 자세한 상태는 위 0번, 절차는 `proxy/README.md`
 - 결과 확대 `zm`(배율·이동): `view`에 CSS transform. 좌표 변환은 `fitRect(view,W,H)`가 변형된 사각형을 그대로 읽으므로 그대로 동작. 확대·이동 직후의 click은 `view._noClick` 시간으로 무시
 
 ## 4. 개발·테스트 방법
@@ -138,4 +157,6 @@ python -m http.server 8765
 2. 정답을 아는 실제 사진을 모아 회귀 세트로 만들기(`samples/` + 기대값 표)
 3. 강한 반사 속 흰 약 분리(테두리 정보를 안전하게 활용하는 방법 찾기)
 4. 팀 공유가 필요하면 서버 동기화(재고·기록)
-5. 인증키로 약품명 검색이 실제로 되는지 확인(응답 필드 점검)
+5. 중계 서버 배포·연결(위 0번), 팀원에게 앱 배포 후 약품명 검색·백업 사용 확인
+6. 실제 폰에서 v5.9 기능(확대·백업·검색) 점검
+7. 앱 자체 화면의 '사용법' 문구를 현재 흐름(한 화면 배치, 기록 저장 창, 더보기 탭)에 맞춰 점검
